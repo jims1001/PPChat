@@ -1,7 +1,7 @@
 package main
 
 import (
-	"awesomeProject1/config"
+	"PProject/service/config"
 	"fmt"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
@@ -46,6 +46,15 @@ func main() {
 	fmt.Println("config :\n", content)
 
 	config.StartNacosWatcher("com.agent.agent-user", "DEFAULT_GROUP")
+	config.StartServiceRegistry("agent.user-service")
+
+	registry := config.NewRegistry("agent.gprc", "127.0.0.1", 50051)
+	registry.AddRemoteService("UserService")
+	registry.AddRemoteService("OrderService")
+
+	registry.Watch()
+
+	fmt.Println("register success，running...")
 
 	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, config.GetCurrentConfig())

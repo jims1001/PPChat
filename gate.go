@@ -1,7 +1,7 @@
 package main
 
 import (
-	v1 "awesomeProject1/gen"
+	v1 "PProject/gen"
 	"context"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"

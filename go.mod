@@ -1,4 +1,4 @@
-module awesomeProject1
+module PProject
 
 go 1.24.3
 
