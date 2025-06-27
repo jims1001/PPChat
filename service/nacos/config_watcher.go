@@ -1,4 +1,4 @@
-package config
+package nacos
 
 import (
 	"fmt"
@@ -22,7 +22,7 @@ func StartNacosWatcher(dataId, group string) {
 			Group:  group,
 		})
 		if err != nil {
-			fmt.Println("get config fail:", err)
+			fmt.Println("get nacos fail:", err)
 			return
 		}
 		updateConfig(content)
@@ -32,13 +32,13 @@ func StartNacosWatcher(dataId, group string) {
 			DataId: dataId,
 			Group:  group,
 			OnChange: func(namespace, group, dataId, data string) {
-				fmt.Println("config change:")
-				fmt.Println("config", data)
+				fmt.Println("nacos change:")
+				fmt.Println("nacos", data)
 				updateConfig(data)
 			},
 		})
 		if err != nil {
-			fmt.Println("get config fail:", err)
+			fmt.Println("get nacos fail:", err)
 			return
 		}
 

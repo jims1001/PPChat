@@ -76,7 +76,7 @@ func main() {
 	addr := cmd.getStringField(redisPath, "Addr")
 	ep := cmd.getStringField(endpointPath, "Endpoint")
 
-	fmt.Println("\n🚀 config filed：")
+	fmt.Println("\n🚀 nacos filed：")
 	fmt.Println("Redis Addr:", addr)
 	fmt.Println("Notification Endpoint:", ep)
 

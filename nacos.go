@@ -1,11 +1,13 @@
 package main
 
 import (
-	"PProject/service/config"
+	"PProject/service/kafka"
+	"PProject/service/nacos"
 	"fmt"
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
+	"log"
 	"net/http"
 )
 
@@ -43,21 +45,31 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("config :\n", content)
+	fmt.Println("nacos :\n", content)
 
-	config.StartNacosWatcher("com.agent.agent-user", "DEFAULT_GROUP")
-	config.StartServiceRegistry("agent.user-service")
+	nacos.StartNacosWatcher("com.agent.agent-user", "DEFAULT_GROUP")
+	nacos.StartServiceRegistry("agent.user-service")
 
-	registry := config.NewRegistry("agent.gprc", "127.0.0.1", 50051)
+	registry := nacos.NewRegistry("agent.gprc", "127.0.0.1", 50051)
 	registry.AddRemoteService("UserService")
 	registry.AddRemoteService("OrderService")
 
 	registry.Watch()
 
+	if err := kafka.Init([]string{"localhost:9092"}); err != nil {
+		log.Fatalf("init producer faile: %v", err)
+	}
+	defer kafka.Close()
+
+	err = kafka.SendMessage("agent.user.login", "user_login", "user_id")
+	if err != nil {
+		println(err.Error())
+	}
+
 	fmt.Println("register success，running...")
 
 	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, config.GetCurrentConfig())
+		fmt.Fprintln(w, nacos.GetCurrentConfig())
 	})
 
 	fmt.Println("service running ： http://localhost:8080/config")
