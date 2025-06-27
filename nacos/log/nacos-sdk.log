@@ -1,0 +1,517 @@
+2025-06-27T14:47:08.428+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@_failover.
+2025-06-27T14:47:08.429+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576)
+2025-06-27T14:47:08.429+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:47:08.429+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:47:08.429+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:47:08.429+0400	DEBUG	rpc/rpc_client.go:393	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:47:08.429+0400	DEBUG	rpc/rpc_client.go:401	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:47:08.429+0400	DEBUG	rpc/rpc_client.go:393	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:47:08.429+0400	DEBUG	rpc/rpc_client.go:393	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:47:08.429+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:47:08.429+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.429+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.429+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.430+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:47:08.430+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=2
+2025-06-27T14:47:08.430+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.431+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=1
+2025-06-27T14:47:08.431+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.431+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=0
+2025-06-27T14:47:08.431+0400	INFO	rpc/rpc_client.go:426	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 try to re connect to a new server, server is not appointed, will choose a random server.
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.431+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.432+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=0, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:47:08.432+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.432+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.432+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.432+0400	WARN	rpc/rpc_client.go:457	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 fail to connect server, after trying 1 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:47:08.533+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.533+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.533+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:47:08.533+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=1, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:47:08.533+0400	WARN	rpc/rpc_client.go:457	config-0-a4a802a0-4cc9-4736-9eb4-c820ae935576 fail to connect server, after trying 2 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:47:08.634+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=2, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:47:08.735+0400	ERROR	config_client/config_client.go:201	get config from server error:client not connected, current status:STARTING, dataId=com.agent.agent-user, group=DEFAULT_GROUP, namespaceId=
+2025-06-27T14:47:08.735+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:47:08.735+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:47:08.735+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.817+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@_failover.
+2025-06-27T14:50:09.818+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4)
+2025-06-27T14:50:09.818+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:50:09.818+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:50:09.818+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:50:09.818+0400	DEBUG	rpc/rpc_client.go:393	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:50:09.818+0400	DEBUG	rpc/rpc_client.go:401	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:50:09.818+0400	DEBUG	rpc/rpc_client.go:393	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:50:09.818+0400	DEBUG	rpc/rpc_client.go:393	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:50:09.818+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:50:09.818+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.818+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.818+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.819+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:50:09.819+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=2
+2025-06-27T14:50:09.819+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:50:09.819+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.819+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.819+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.820+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=1
+2025-06-27T14:50:09.820+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.820+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=0
+2025-06-27T14:50:09.820+0400	INFO	rpc/rpc_client.go:426	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 try to re connect to a new server, server is not appointed, will choose a random server.
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.820+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=0, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.820+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.821+0400	WARN	rpc/rpc_client.go:457	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 fail to connect server, after trying 1 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:50:09.920+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=1, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:50:09.921+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:09.921+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:09.921+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:50:09.921+0400	WARN	rpc/rpc_client.go:457	config-0-5059b99f-6be1-4559-96ae-5fdb31a20ea4 fail to connect server, after trying 2 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:50:10.022+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=2, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:50:10.123+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:50:10.123+0400	ERROR	config_client/config_client.go:201	get config from server error:client not connected, current status:STARTING, dataId=com.agent.agent-user, group=DEFAULT_GROUP, namespaceId=
+2025-06-27T14:50:10.123+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:50:10.123+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.439+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@_failover.
+2025-06-27T14:51:13.440+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-c3a9e293-a663-4649-83cf-7e7329c1926e)
+2025-06-27T14:51:13.440+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:51:13.440+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:51:13.440+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:51:13.440+0400	DEBUG	rpc/rpc_client.go:393	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:51:13.440+0400	DEBUG	rpc/rpc_client.go:401	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:51:13.440+0400	DEBUG	rpc/rpc_client.go:393	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:51:13.440+0400	DEBUG	rpc/rpc_client.go:393	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:51:13.440+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:51:13.440+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.440+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.440+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.441+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:51:13.441+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=2
+2025-06-27T14:51:13.441+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:51:13.441+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.441+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.441+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.441+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=1
+2025-06-27T14:51:13.441+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:51:13.441+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.442+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-c3a9e293-a663-4649-83cf-7e7329c1926e fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=0
+2025-06-27T14:51:13.442+0400	INFO	rpc/rpc_client.go:426	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e try to re connect to a new server, server is not appointed, will choose a random server.
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.442+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=0, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.442+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.443+0400	WARN	rpc/rpc_client.go:457	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e fail to connect server, after trying 1 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:51:13.543+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.543+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.543+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:51:13.543+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=1, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:51:13.544+0400	WARN	rpc/rpc_client.go:457	config-0-c3a9e293-a663-4649-83cf-7e7329c1926e fail to connect server, after trying 2 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:51:13.645+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"","module":"config","tag":""}, retryTimes=2, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:51:13.745+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:51:13.746+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:51:13.745+0400	ERROR	config_client/config_client.go:201	get config from server error:client not connected, current status:STARTING, dataId=com.agent.agent-user, group=DEFAULT_GROUP, namespaceId=
+2025-06-27T14:51:13.746+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.279+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@public_failover.
+2025-06-27T14:53:26.280+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3)
+2025-06-27T14:53:26.280+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:53:26.280+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:53:26.280+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:53:26.281+0400	DEBUG	rpc/rpc_client.go:393	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:53:26.281+0400	DEBUG	rpc/rpc_client.go:401	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:53:26.281+0400	DEBUG	rpc/rpc_client.go:393	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:53:26.281+0400	DEBUG	rpc/rpc_client.go:393	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:53:26.281+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:26.281+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.281+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.281+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.283+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:53:26.283+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=2
+2025-06-27T14:53:26.283+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:26.283+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.283+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.283+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.284+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=1
+2025-06-27T14:53:26.284+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:26.284+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.284+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.284+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.285+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=0
+2025-06-27T14:53:26.285+0400	INFO	rpc/rpc_client.go:426	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 try to re connect to a new server, server is not appointed, will choose a random server.
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.285+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=0, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.285+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.285+0400	WARN	rpc/rpc_client.go:457	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 fail to connect server, after trying 1 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:53:26.386+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.386+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.386+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:26.386+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=1, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:26.386+0400	WARN	rpc/rpc_client.go:457	config-0-8cc706e4-656d-40b9-bae6-6cc22f0e70c3 fail to connect server, after trying 2 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:53:26.487+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=2, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:26.588+0400	ERROR	config_client/config_client.go:201	get config from server error:client not connected, current status:STARTING, dataId=com.agent.agent-user, group=DEFAULT_GROUP, namespaceId=public
+2025-06-27T14:53:26.589+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:26.589+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:26.589+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.466+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@public_failover.
+2025-06-27T14:53:53.467+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-952077ff-8098-4806-adc8-e99378cb2192)
+2025-06-27T14:53:53.467+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:53:53.467+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:53:53.467+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:53:53.467+0400	DEBUG	rpc/rpc_client.go:393	config-0-952077ff-8098-4806-adc8-e99378cb2192 register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:53:53.467+0400	DEBUG	rpc/rpc_client.go:401	config-0-952077ff-8098-4806-adc8-e99378cb2192 register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:53:53.467+0400	DEBUG	rpc/rpc_client.go:393	config-0-952077ff-8098-4806-adc8-e99378cb2192 register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:53:53.467+0400	DEBUG	rpc/rpc_client.go:393	config-0-952077ff-8098-4806-adc8-e99378cb2192 register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:53:53.467+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:53.467+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.467+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.467+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.468+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:53:53.468+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=2
+2025-06-27T14:53:53.468+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.468+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=1
+2025-06-27T14:53:53.468+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.468+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.468+0400	WARN	rpc/rpc_client.go:329	[RpcClient.Start] config-0-952077ff-8098-4806-adc8-e99378cb2192 fail to connect to server on start up, error message=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused", start up retry times left=0
+2025-06-27T14:53:53.468+0400	INFO	rpc/rpc_client.go:426	config-0-952077ff-8098-4806-adc8-e99378cb2192 try to re connect to a new server, server is not appointed, will choose a random server.
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.469+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=0, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.469+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.469+0400	WARN	rpc/rpc_client.go:457	config-0-952077ff-8098-4806-adc8-e99378cb2192 fail to connect server, after trying 1 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:53:53.570+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.570+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.570+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=1, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:53.570+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.570+0400	WARN	rpc/rpc_client.go:457	config-0-952077ff-8098-4806-adc8-e99378cb2192 fail to connect server, after trying 2 times, last try server is {serverIp:127.0.0.1 serverPort:10848 serverGrpcPort:11848}, error=server check request failed , err:rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing: dial tcp 127.0.0.1:11848: connect: connection refused"
+2025-06-27T14:53:53.670+0400	ERROR	rpc/rpc_client.go:629	Send request fail, request=ConfigQueryRequest, body={"requestId":"","group":"DEFAULT_GROUP","dataId":"com.agent.agent-user","tenant":"public","module":"config","tag":""}, retryTimes=2, error=client not connected, current status:STARTING
+github.com/nacos-group/nacos-sdk-go/v2/common/remote/rpc.(*RpcClient).Request
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/common/remote/rpc/rpc_client.go:591
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).requestProxy
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:63
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigProxy).queryConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_proxy.go:128
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).getConfigInner
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:198
+github.com/nacos-group/nacos-sdk-go/v2/clients/config_client.(*ConfigClient).GetConfig
+	/Users/tong/go/pkg/mod/github.com/nacos-group/nacos-sdk-go/v2@v2.3.2/clients/config_client/config_client.go:166
+main.main
+	/Users/tong/GolandProjects/awesomeProject1/nacos.go:41
+runtime.main
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/proc.go:283
+runtime.goexit
+	/Users/tong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.3.darwin-arm64/src/runtime/asm_arm64.s:1223
+2025-06-27T14:53:53.771+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:53:53.771+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:53:53.771+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:53:53.771+0400	ERROR	config_client/config_client.go:201	get config from server error:client not connected, current status:STARTING, dataId=com.agent.agent-user, group=DEFAULT_GROUP, namespaceId=public
+2025-06-27T14:56:50.331+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@public_failover.
+2025-06-27T14:56:50.331+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9)
+2025-06-27T14:56:50.331+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T14:56:50.331+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T14:56:50.331+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T14:56:50.331+0400	DEBUG	rpc/rpc_client.go:393	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T14:56:50.331+0400	DEBUG	rpc/rpc_client.go:401	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T14:56:50.331+0400	DEBUG	rpc/rpc_client.go:393	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T14:56:50.331+0400	DEBUG	rpc/rpc_client.go:393	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T14:56:50.331+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848}
+2025-06-27T14:56:50.331+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T14:56:50.331+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T14:56:50.331+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T14:56:50.332+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T14:56:50.445+0400	INFO	rpc/rpc_client.go:337	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 success to connect to server {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848} on start up, connectionId=1_127.0.0.1:63300
+2025-06-27T14:56:50.445+0400	INFO	rpc/rpc_client.go:486	config-0-ef80aeb1-216a-4a89-8cd6-543cfcec7ef9 notify connected event to listeners , connectionId=1_127.0.0.1:63300
+2025-06-27T14:56:50.445+0400	INFO	config_client/config_connection_event_listener.go:38	[ConfigConnectionEventListener] connect to config server for taskId: 0
+2025-06-27T14:56:50.447+0400	DEBUG	rpc/grpc_connection.go:69	1_127.0.0.1:63300 grpc request nacos server success, request=metadata:<type:"ConfigQueryRequest" clientIp:"192.168.64.1" headers:<key:"Client-AppName" value:"" > headers:<key:"Client-RequestTS" value:"1751021810445" > headers:<key:"Client-RequestToken" value:"5f254a19f36939ea4cd3cac046416cf6" > headers:<key:"accessToken" value:"AUTH_DISABLED" > headers:<key:"charset" value:"utf-8" > headers:<key:"exConfigInfo" value:"true" > headers:<key:"notify" value:"false" > > body:<value:"{\"requestId\":\"\",\"group\":\"DEFAULT_GROUP\",\"dataId\":\"com.agent.agent-user\",\"tenant\":\"public\",\"module\":\"config\",\"tag\":\"\"}" > , response={"resultCode":200,"errorCode":0,"message":null,"requestId":"","content":"spring.application.name=agent-user\nspring.profiles.active=dev\nspring.cloud.config.uri=http://localhost:20000\n#spring.config.import=configserver:\nspring.cloud.config.name=agent-user\nspring.cloud.config.profile=dev\nspring.cloud.config.label=master\nspring.config.import=optional:configserver:\nspring.cloud.config.token=client1-key-secret-12345","encryptedDataKey":null,"contentType":"yaml","md5":"d4d323e2713bc71cfec290254168bb2c","lastModified":1751021055530,"beta":false,"tag":null}
+2025-06-27T14:56:50.448+0400	DEBUG	cache/disk_cache.go:136	no need to delete Config Encrypted Data Key cache file, file path nacos/cache/config/encrypted-data-key/com.agent.agent-user@@DEFAULT_GROUP@@public, file doesn't exist.
+2025-06-27T15:02:27.924+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@public_failover.
+2025-06-27T15:02:27.925+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff)
+2025-06-27T15:02:27.925+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T15:02:27.925+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T15:02:27.925+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T15:02:27.925+0400	DEBUG	rpc/rpc_client.go:393	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T15:02:27.925+0400	DEBUG	rpc/rpc_client.go:401	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T15:02:27.925+0400	DEBUG	rpc/rpc_client.go:393	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T15:02:27.925+0400	DEBUG	rpc/rpc_client.go:393	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T15:02:27.925+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848}
+2025-06-27T15:02:27.925+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T15:02:27.925+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T15:02:27.925+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T15:02:27.926+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T15:02:28.039+0400	INFO	rpc/rpc_client.go:337	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff success to connect to server {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848} on start up, connectionId=1_127.0.0.1:52817
+2025-06-27T15:02:28.039+0400	INFO	rpc/rpc_client.go:486	config-0-7b628947-f92b-45f1-8749-7f0bdcc022ff notify connected event to listeners , connectionId=1_127.0.0.1:52817
+2025-06-27T15:02:28.039+0400	INFO	config_client/config_connection_event_listener.go:38	[ConfigConnectionEventListener] connect to config server for taskId: 0
+2025-06-27T15:02:28.040+0400	DEBUG	rpc/grpc_connection.go:69	1_127.0.0.1:52817 grpc request nacos server success, request=metadata:<type:"ConfigQueryRequest" clientIp:"192.168.64.1" headers:<key:"Client-AppName" value:"" > headers:<key:"Client-RequestTS" value:"1751022148039" > headers:<key:"Client-RequestToken" value:"d9f0ed6746383a2b2cba85b437127c66" > headers:<key:"accessToken" value:"AUTH_DISABLED" > headers:<key:"charset" value:"utf-8" > headers:<key:"exConfigInfo" value:"true" > headers:<key:"notify" value:"false" > > body:<value:"{\"requestId\":\"\",\"group\":\"DEFAULT_GROUP\",\"dataId\":\"com.agent.agent-user\",\"tenant\":\"public\",\"module\":\"config\",\"tag\":\"\"}" > , response={"resultCode":200,"errorCode":0,"message":null,"requestId":"","content":"spring.application.name=agent-user\nspring.profiles.active=dev\nspring.cloud.config.uri=http://localhost:20000\n#spring.config.import=configserver:\nspring.cloud.config.name=agent-user\nspring.cloud.config.profile=dev\nspring.cloud.config.label=master\nspring.config.import=optional:configserver:\nspring.cloud.config.token=client1-key-secret-12345","encryptedDataKey":null,"contentType":"yaml","md5":"d4d323e2713bc71cfec290254168bb2c","lastModified":1751021055530,"beta":false,"tag":null}
+2025-06-27T15:02:28.041+0400	DEBUG	cache/disk_cache.go:136	no need to delete Config Encrypted Data Key cache file, file path nacos/cache/config/encrypted-data-key/com.agent.agent-user@@DEFAULT_GROUP@@public, file doesn't exist.
+2025-06-27T15:03:32.655+0400	WARN	cache/disk_cache.go:193	read Config Content failed. cause file doesn't exist, file path: nacos/cache/config/com.agent.agent-user@@DEFAULT_GROUP@@public_failover.
+2025-06-27T15:03:32.656+0400	INFO	rpc/rpc_client.go:157	init rpc client for name %!(EXTRA string=config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc)
+2025-06-27T15:03:32.656+0400	INFO	rpc/rpc_client.go:166	get app conn labels from client config map[] 
+2025-06-27T15:03:32.656+0400	INFO	rpc/rpc_client.go:168	get app conn labels from env map[] 
+2025-06-27T15:03:32.657+0400	INFO	rpc/rpc_client.go:171	final app conn labels : map[] 
+2025-06-27T15:03:32.657+0400	DEBUG	rpc/rpc_client.go:393	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc register server push request:ConfigChangeNotifyRequest handler:ConfigChangeNotifyRequestHandler
+2025-06-27T15:03:32.657+0400	DEBUG	rpc/rpc_client.go:401	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc register connection listener [*config_client.ConfigConnectionEventListener] to current client
+2025-06-27T15:03:32.657+0400	DEBUG	rpc/rpc_client.go:393	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc register server push request:ConnectResetRequest handler:ConnectResetRequestHandler
+2025-06-27T15:03:32.657+0400	DEBUG	rpc/rpc_client.go:393	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc register server push request:ClientDetectionRequest handler:ClientDetectionRequestHandler
+2025-06-27T15:03:32.657+0400	INFO	rpc/rpc_client.go:327	[RpcClient.Start] config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc try to connect to server on start up, server: {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848}
+2025-06-27T15:03:32.657+0400	INFO	rpc/grpc_client.go:175	check tls config %!(EXTRA *constant.TLSConfig=&{false false false    })
+2025-06-27T15:03:32.657+0400	INFO	rpc/grpc_client.go:180	try to get tls config from env
+2025-06-27T15:03:32.657+0400	INFO	rpc/grpc_client.go:189	 tls config from env is not enable
+2025-06-27T15:03:32.657+0400	INFO	util/common.go:96	Local IP:192.168.64.1
+2025-06-27T15:03:32.760+0400	INFO	rpc/rpc_client.go:337	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc success to connect to server {serverIp:127.0.0.1 serverPort:8848 serverGrpcPort:9848} on start up, connectionId=1_127.0.0.1:53948
+2025-06-27T15:03:32.760+0400	INFO	rpc/rpc_client.go:486	config-0-7bc43b1d-1291-47ec-bb29-bcf52bcfe3bc notify connected event to listeners , connectionId=1_127.0.0.1:53948
+2025-06-27T15:03:32.760+0400	INFO	config_client/config_connection_event_listener.go:38	[ConfigConnectionEventListener] connect to config server for taskId: 0
+2025-06-27T15:03:32.761+0400	DEBUG	rpc/grpc_connection.go:69	1_127.0.0.1:53948 grpc request nacos server success, request=metadata:<type:"ConfigQueryRequest" clientIp:"192.168.64.1" headers:<key:"Client-AppName" value:"" > headers:<key:"Client-RequestTS" value:"1751022212760" > headers:<key:"Client-RequestToken" value:"b6f5a315ed249e26bb5cf6a5a6e75069" > headers:<key:"accessToken" value:"AUTH_DISABLED" > headers:<key:"charset" value:"utf-8" > headers:<key:"exConfigInfo" value:"true" > headers:<key:"notify" value:"false" > > body:<value:"{\"requestId\":\"\",\"group\":\"DEFAULT_GROUP\",\"dataId\":\"com.agent.agent-user\",\"tenant\":\"public\",\"module\":\"config\",\"tag\":\"\"}" > , response={"resultCode":200,"errorCode":0,"message":null,"requestId":"","content":"spring.application.name=agent-user\nspring.profiles.active=dev\nspring.cloud.config.uri=http://localhost:20000\n#spring.config.import=configserver:\nspring.cloud.config.name=agent-user\nspring.cloud.config.profile=dev\nspring.cloud.config.label=master\nspring.config.import=optional:configserver:\nspring.cloud.config.token=client1-key-secret-12345","encryptedDataKey":null,"contentType":"yaml","md5":"d4d323e2713bc71cfec290254168bb2c","lastModified":1751021055530,"beta":false,"tag":null}
+2025-06-27T15:03:32.762+0400	DEBUG	cache/disk_cache.go:136	no need to delete Config Encrypted Data Key cache file, file path nacos/cache/config/encrypted-data-key/com.agent.agent-user@@DEFAULT_GROUP@@public, file doesn't exist.

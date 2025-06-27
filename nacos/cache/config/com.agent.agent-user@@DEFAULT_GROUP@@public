@@ -1,0 +1,9 @@
+spring.application.name=agent-user
+spring.profiles.active=dev
+spring.cloud.config.uri=http://localhost:20000
+#spring.config.import=configserver:
+spring.cloud.config.name=agent-user
+spring.cloud.config.profile=dev
+spring.cloud.config.label=master
+spring.config.import=optional:configserver:
+spring.cloud.config.token=client1-key-secret-12345
