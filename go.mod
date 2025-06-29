@@ -1,6 +1,6 @@
 module PProject
 
-go 1.24.3
+go 1.23.0
 
 require (
 	github.com/Shopify/sarama v1.29.1

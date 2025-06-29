@@ -11,12 +11,12 @@ import (
 )
 
 type HelloServiceImpl struct {
-	v1.UnimplementedHelloServiceServer // 推荐嵌入，防止未来 break
+	v1.UnimplementedHelloServiceServer
 }
 
 func (s *HelloServiceImpl) SayHello(ctx context.Context, req *v1.HelloRequest) (*v1.HelloReply, error) {
 	reply := &v1.HelloReply{
-		Message: "Hello, " + req.Name,
+		Message: "Hello GRPC, " + req.Name,
 	}
 	return reply, nil
 }
