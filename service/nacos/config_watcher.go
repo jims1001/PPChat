@@ -27,7 +27,6 @@ func StartNacosWatcher(dataId, group string) {
 		}
 		updateConfig(content)
 
-		// 开始监听
 		err = configClient.ListenConfig(vo.ConfigParam{
 			DataId: dataId,
 			Group:  group,
@@ -42,7 +41,7 @@ func StartNacosWatcher(dataId, group string) {
 			return
 		}
 
-		select {} // 阻止 goroutine 退出
+		select {}
 	}()
 }
 

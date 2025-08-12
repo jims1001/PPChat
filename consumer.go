@@ -10,7 +10,7 @@ func main() {
 	kafka.RegisterHandler("test-topic", handleTestTopic)
 	kafka.RegisterHandler("log-topic", handleLogTopic)
 
-	// 启动消费者
+	// Start consumer
 	err := kafka.StartConsumerGroup([]string{"localhost:9092"}, "my-group", []string{
 		"test-topic",
 		"log-topic",

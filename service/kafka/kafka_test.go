@@ -20,7 +20,6 @@ func TestConnectKafka(t *testing.T) {
 		log.Fatal("InitKafkaClient failed:", err)
 	}
 
-	// 获取 broker 列表作为验证
 	brokerCount := len(KafkaClient.Brokers())
 	if brokerCount == 0 {
 		t.Fatalf("No brokers found in cluster")
@@ -34,17 +33,15 @@ func TestSendKafkaMessage(t *testing.T) {
 	brokers := []string{"localhost:9092"}
 	topic := "test-topic"
 	message := "send kafka system message"
-	// 初始化 Kafka client
+
 	if err := InitKafkaClient(brokers); err != nil {
 		t.Fatalf("InitKafkaClient failed: %v", err)
 	}
 
-	// 初始化同步生产者
 	if err := InitSyncProducerFromClient(); err != nil {
 		t.Fatalf("InitSyncProducer failed: %v", err)
 	}
 
-	// 发送同步消息
 	if err := SendSync(topic, message); err != nil {
 		t.Errorf("SendSync failed: %v", err)
 	} else {

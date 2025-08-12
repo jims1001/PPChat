@@ -1,0 +1,18 @@
+syntax = "proto3";
+package router;
+option go_package = "/message;Message";
+
+message MessageFrame {
+  enum Type { DATA = 0; REGISTER = 1; UNREGISTER = 2; DELIVER = 3; PING = 4; }
+  Type   type      = 1;
+  string from      = 2; // user_id of sender (for REGISTER it is the user being registered)
+  string to        = 3; // target user_id (for DATA/DELIVER)
+  bytes  payload   = 4; // raw message bytes from client
+  string gateway_id= 5; // which gateway this frame comes from / should be delivered to
+  string conn_id   = 6; // connection ID at gateway (optional)
+  int64  ts        = 7; // unix ms
+}
+
+service Router {
+  rpc Gateway(stream MessageFrame) returns (stream MessageFrame);
+}

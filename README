@@ -1,0 +1,12 @@
+
+
+protoc -I proto proto/router.proto \                                                                                                                      13:35:29 
+  --go_out=./gen --go-grpc_out=./gen
+
+
+go get google.golang.org/grpc@v1.63.2
+go get google.golang.org/protobuf@v1.34.2
+
+
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0
