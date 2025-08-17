@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package gateway;
+option go_package = "/gateway;MsgGateway";
+
+message SendMessageFrame {
+  enum Type { DATA = 0; REGISTER = 1; UNREGISTER = 2; DELIVER = 3; PING = 4; }
+  Type   type       = 1;
+  string from       = 2;
+  string to         = 3;
+  bytes  payload    = 4;
+  string gateway_id = 5;
+  string conn_id    = 6;
+  int64  ts         = 7;
+}
+
+service GatewayControl {
+  rpc Send(SendMessageFrame) returns (SendReply);
+}
+
+message SendReply {
+  bool ok       = 1;
+  string error  = 2;
+}

@@ -31,7 +31,10 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 	connID := time.Now().Format("150405.000000")
 	ci := &conn{id: connID, user: user}
+
 	s.reg.add(ci)
+
+	s.connMgr.Add(user, ws)
 
 	_ = storage.PresenceOnline(user, s.gwID, presenceTTL)
 
@@ -83,7 +86,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 		}
 	}()
 
-	// Registration/unregistration messages are sent only to outbound (do not write to ws in defer)
+	// Registration/registration messages are sent only to outbound (do not write to ws in defer)
 	wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_REGISTER, From: user}
 
 	// Read loop: read-only, exit on error, write goroutine handles cleanup
@@ -111,6 +114,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 	// Kick out
 	_ = storage.PresenceOffline(user)
+	s.connMgr.Remove(user)
 	wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: user}
 	<-done
 }

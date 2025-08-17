@@ -33,7 +33,7 @@ func wsEcho(c *gin.Context) {
 		println(err)
 		return
 	}
-	
+
 	conn.SetPongHandler(func(string) error {
 		err := conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		if err != nil {

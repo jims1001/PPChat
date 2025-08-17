@@ -15,11 +15,17 @@ type Server struct {
 	reg        *registry
 	// below fields are used by ws_server for writing back to clients
 	incoming chan *pb.MessageFrame // frames from router destined to local users
+
+	connMgr *ConnManager // connection manager
 }
 
-func NewServer(gwID, routerAddr string) (*Server, error) {
+func NewServer(gwID, routerAddr string, conn *ConnManager) (*Server, error) {
 	return &Server{
-		gwID: gwID, routerAddr: routerAddr, reg: newRegistry(), incoming: make(chan *pb.MessageFrame, 4096),
+		gwID:       gwID,
+		routerAddr: routerAddr,
+		reg:        newRegistry(),
+		incoming:   make(chan *pb.MessageFrame, 4096),
+		connMgr:    conn,
 	}, nil
 }
 
