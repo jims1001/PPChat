@@ -2,6 +2,7 @@ package main
 
 import (
 	pb "PProject/gen/gateway"
+	"PProject/module/user"
 	"PProject/service/chat"
 	"PProject/service/storage"
 	"github.com/gin-gonic/gin"
@@ -78,6 +79,7 @@ func main() {
 	// 6) Start HTTP + WebSocket
 	r := gin.New()
 	r.GET("/chat", g.HandleWS) // e.g. ws://localhost:8080/chat?user=A&to=B
+	r.POST("/login", user.HandlerLogin)
 	log.Println("[HTTP] Listening on :8080")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)

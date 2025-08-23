@@ -28,6 +28,42 @@ type Config struct {
 	MaxRetry    int
 }
 
+// 将 Config 应用到 ClientOptions
+func applyConfigToOptions(cfg *Config) (*options.ClientOptions, error) {
+	var opts *options.ClientOptions
+
+	switch {
+	case cfg.Uri != "":
+		// 优先使用完整 URI（可含参数 ?authSource=admin 等）
+		opts = options.Client().ApplyURI(cfg.Uri)
+	case len(cfg.Address) > 0:
+		// 其次使用地址列表
+		opts = options.Client().SetHosts(cfg.Address)
+	default:
+		return nil, errs.New("mongo uri or address is required")
+	}
+
+	// 连接池
+	opts.SetMaxPoolSize(uint64(cfg.MaxPoolSize))
+
+	// 认证：若单独给了用户名/密码/来源，以代码优先覆盖 URI 中的认证（如有）
+	if cfg.Username != "" {
+		cred := options.Credential{
+			Username:   cfg.Username,
+			Password:   cfg.Password,
+			AuthSource: cfg.AuthSource, // 若为空，ValidateAndSetDefaults 已设 admin
+		}
+		opts.SetAuth(cred)
+	}
+
+	// 也可在此添加更多可选项（按需开启）
+	// opts.SetRetryWrites(true)
+	// opts.SetServerSelectionTimeout(10 * time.Second)
+	// opts.SetAppName("PProject")
+
+	return opts, nil
+}
+
 type Client struct {
 	tx tx.Tx
 	db *mongo.Database
@@ -46,7 +82,7 @@ func NewMongoDB(ctx context.Context, config *Config) (*Client, error) {
 	if err := config.ValidateAndSetDefaults(); err != nil {
 		return nil, err
 	}
-	opts := options.Client().ApplyURI(config.Uri).SetMaxPoolSize(uint64(config.MaxPoolSize))
+	opts, _ := applyConfigToOptions(config)
 	var (
 		cli *mongo.Client
 		err error
@@ -62,6 +98,8 @@ func NewMongoDB(ctx context.Context, config *Config) (*Client, error) {
 	if err != nil {
 		return nil, errs.WrapMsg(err, "failed to connect to MongoDB", "URI", config.Uri)
 	}
+
+	cli, err = connectMongo(ctx, opts)
 	mtx, err := NewMongoTx(ctx, cli)
 	if err != nil {
 		return nil, err
