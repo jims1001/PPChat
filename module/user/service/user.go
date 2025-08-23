@@ -3,6 +3,11 @@ package service
 import (
 	usermodel "PProject/module/user/model"
 	jwtlib "PProject/tools/security"
+	"context"
+	"errors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -18,6 +23,12 @@ type LoginParams struct {
 	Scopes     []string      // 令牌 scope
 	TTL        time.Duration // 覆盖 opts.TTL；<=0 则使用 opts.TTL
 	Now        time.Time     // 业务注入“当前时间”，零值时用 time.Now()
+}
+
+type UserSessionKey struct {
+	UserId     string `json:"user_id"`
+	DeviceType string `json:"device_type"`
+	DeviceID   string `json:"device_id"`
 }
 
 func Login(opts jwtlib.Options, in LoginParams) (usermodel.UserSession, error) {
@@ -59,4 +70,52 @@ func Login(opts jwtlib.Options, in LoginParams) (usermodel.UserSession, error) {
 
 func Verify(opts jwtlib.Options, token string, expectedHash string) (*jwtlib.JWTClaims, error) {
 	return jwtlib.Verify(opts, token, expectedHash)
+}
+
+func ReLoginArchiveAndReplace(ctx context.Context, db *mongo.Database, key UserSessionKey, newRec usermodel.UserSession) error {
+	sess, err := db.Client().StartSession()
+	if err != nil {
+		return err
+	}
+	defer sess.EndSession(ctx)
+
+	_, err = sess.WithTransaction(ctx, func(sc mongo.SessionContext) (interface{}, error) {
+		coll := db.Collection("sessions")
+		logColl := db.Collection("user_session_log")
+
+		// 1) 查旧
+		var old usermodel.UserSession
+		err := coll.FindOne(sc, bson.M{
+			"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID, "is_valid": true,
+		}).Decode(&old)
+		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, err
+		}
+
+		// 2) 归档
+		if err == nil {
+			doc := bson.M{}
+			b, _ := bson.Marshal(old)
+			_ = bson.Unmarshal(b, &doc)
+			doc["archived_at"] = time.Now()
+			doc["reason"] = "relogin"
+			doc["SessionID"] = newRec.SessionID
+			if _, e := logColl.InsertOne(sc, doc); e != nil {
+				return nil, e
+			}
+		}
+
+		// 3) replace + upsert
+		newRec.UpdateTime = time.Now()
+		_, err = coll.ReplaceOne(sc,
+			bson.M{"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID},
+			newRec,
+			options.Replace().SetUpsert(true),
+		)
+		if err != nil {
+			return nil, err
+		}
+		return nil, nil
+	})
+	return err
 }

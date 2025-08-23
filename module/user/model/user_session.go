@@ -24,6 +24,7 @@ type UserSession struct {
 	ExpireAt   time.Time  `bson:"expire_at" json:"expire_at"`     // TTL索引用
 	LogoutTime *time.Time `bson:"logout_time,omitempty" json:"logout_time"`
 	Status     string     `bson:"status" json:"status"` // online/offline/kicked/expired
+	Reason     string     `bson:"reason" json:"reason"` // 备注
 
 	// —— 认证与安全 ——
 	AccessTokenHash  string   `bson:"access_token_hash" json:"access_token_hash"`   // AccessToken 哈希
