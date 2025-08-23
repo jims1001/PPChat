@@ -3,8 +3,10 @@ package main
 import (
 	pb "PProject/gen/message"
 	"PProject/service/chat"
+	"PProject/service/natsx"
 	"PProject/service/rpc"
 	"PProject/service/storage"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"net"
@@ -45,10 +47,36 @@ func main() {
 
 	manager.Start()
 
+	natsx.UseGlobalMiddlewares(natsx.NatsxIdemMiddleware(natsx.NewMemIdem(2*time.Minute), 2*time.Minute))
+
+	// 2) 注册路由（各节点同样的 Durable/Queue）
+	_ = natsx.RegisterRoute(natsx.NatsxRoute{
+		Biz:           "inbox",
+		Subject:       "inbox.user.*",
+		Mode:          natsx.JetStreamPush,
+		Durable:       "inbox-dur",     // 全节点一致
+		Queue:         "inbox-workers", // 全节点一致
+		AckWait:       30 * time.Second,
+		MaxAckPending: 4096,
+	})
+
+	// 3) 注册处理器（可在 StartNats 前/后）
+	_ = natsx.RegisterHandler("inbox", func(ctx context.Context, m natsx.NatsxMessage) error {
+		// 你的幂等业务逻辑（数据库 UPSERT 等）
+		return nil
+	})
+
+	// 4) 启动全局 NATS
+	natsx.StartNats(natsx.NatsxConfig{
+		Servers: []string{"nats://127.0.0.1:4222"},
+		Name:    "gw-node-1",
+	})
+
 	gs := grpc.NewServer()
 	pb.RegisterRouterServer(gs, chat.NewRouterService(manager))
 	log.Println("router listening :50051")
 	if err := gs.Serve(lis); err != nil {
 		log.Fatal(err)
 	}
+
 }

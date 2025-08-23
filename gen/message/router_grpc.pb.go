@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: router.proto
 
-package Message
+package messagepb
 
 import (
 	context "context"

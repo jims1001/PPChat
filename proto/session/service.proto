@@ -1,0 +1,195 @@
+syntax = "proto3";
+package message.v1;
+option go_package = "PProject/gen/session;sessionpb";
+
+import "google/protobuf/empty.proto";
+import "message/frame.proto";
+import "message/message.proto";
+import "message/collab.proto";
+import "message/session.proto";
+import "message/common.proto";
+
+// ========== 一、实时通道（帧级双向流） ==========
+service RealtimeService {
+  // 双向流：客户端发送/接收 SendMessageFrame（含 DATA/ACK/事件等）
+  rpc Connect(stream MessageFrameData) returns (stream MessageFrameData);
+
+  // 仅发布一帧（服务端负责分发/入库/通知）；适合 HTTP/gRPC Unary 发布
+  rpc Publish(MessageFrameData) returns (AckData);
+
+  // 订阅事件（按 intents/guild/channel/thread 过滤），服务端推送帧
+  rpc Subscribe(SubscribeRequest) returns (stream MessageFrameData);
+
+  // 发送确认（独立ACK路径，可配合 QoS=AT_LEAST_ONCE）
+  rpc Ack(AckData) returns (google.protobuf.Empty);
+}
+
+message SubscribeRequest {
+  uint64 intents               = 1;  // 与 realtime.proto 中的意图位图一致
+  repeated string guild_ids    = 2;
+  repeated string channel_ids  = 3;
+  repeated string thread_ids   = 4;
+  repeated int32 content_types = 5;  // 仅订阅某类 contentType
+  bool   include_presence      = 10; // 是否同时订阅在线/输入中事件
+  bool   include_collab        = 11; // 是否同时订阅协作动作
+  bool   ack_required          = 12;
+  string correlation_id        = 13;
+}
+
+// ========== 二、消息服务（面向 MessageData 的业务接口） ==========
+service MessageService {
+  // 发送单条消息（服务端封装为帧并分发）。建议携带 dedup_id / ack_id。
+  rpc Send(SendReq) returns (SendResp);
+
+  // 批量发送
+  rpc BatchSend(BatchSendReq) returns (BatchSendResp);
+
+  // 编辑消息
+  rpc Edit(EditMessageReq) returns (AckData);
+
+  // 删除（本地可见删除）
+  rpc Delete(DeleteMessageReq) returns (AckData);
+
+  // 撤回（对端不可见）
+  rpc Recall(RecallReq) returns (AckData);
+
+  // 反应（表情/赞等）
+  rpc React(ReactReq) returns (AckData);
+
+  // 标记已读
+  rpc MarkRead(MarkReadReq) returns (AckData);
+
+  // 历史列表（会话或频道/线程）
+  rpc ListHistory(ListHistoryReq) returns (ListHistoryResp);
+
+  // 获取单条消息
+  rpc GetMessage(GetMessageReq) returns (MessageData);
+}
+
+message SendReq {
+  MessageData message      = 1;
+  string dedup_id          = 2; // 幂等ID（窗口期内唯一）
+  string ack_id            = 3; // 请求方期望回执ID
+  string correlation_id    = 4;
+}
+message SendResp {
+  AckData ack                  = 1;
+  MessageData persisted    = 2; // 服务端入库后的最终形态（补全 seq/server_msg_id 等）
+}
+
+message BatchSendReq {
+  repeated SendReq items   = 1;
+}
+message BatchSendResp {
+  repeated SendResp results = 1;
+}
+
+message EditMessageReq {
+  string client_msg_id  = 1;
+  int32  expect_version = 2;   // 乐观锁（可选）
+  MessageData new_value = 3;   // 仅需填变更字段的元素（如 new_value.text_elem）
+  string reason         = 4;
+  string correlation_id = 5;
+}
+
+message DeleteMessageReq {
+  string client_msg_id  = 1;
+  string reason         = 2;
+  string correlation_id = 3;
+}
+
+message RecallReq {
+  string client_msg_id  = 1;
+  string reason         = 2;
+  string correlation_id = 3;
+}
+
+message ReactReq {
+  string client_msg_id  = 1;
+  int32  reaction_type  = 2;
+  bool   revoke         = 3; // 取消该反应
+  string correlation_id = 4;
+}
+
+message MarkReadReq {
+  string conversation_id = 1; // 或 guild_id+channel_id+thread_id
+  string up_to_client_msg_id = 2; // 标记到某条消息为止
+  int64  read_time        = 3;
+  string correlation_id   = 4;
+}
+
+message ListHistoryReq {
+  // 互斥：单聊/群聊 or 公域频道
+  string user_peer_id      = 1; // 单聊对端
+  string group_id          = 2; // 群聊
+  string guild_id          = 3; // 公域
+  string channel_id        = 4;
+  string thread_id         = 5;
+
+  // 时间/定位
+  string anchor_client_msg_id = 10; // 以某条消息为锚点
+  int64  before               = 11; // < ts（ms）
+  int64  after                = 12; // > ts（ms）
+
+  // 过滤
+  repeated int32 content_types = 13;
+  bool include_deleted         = 14; // 是否包含删除
+  bool include_recalled        = 15; // 是否包含撤回
+
+  Page page                    = 20; // 分页
+}
+
+message ListHistoryResp {
+  repeated MessageData items = 1;
+  PageResp page              = 2;
+}
+
+message GetMessageReq {
+  string client_msg_id = 1;
+}
+
+// ========== 三、协作服务（ActionEnvelope 动作 & 订阅） ==========
+service CollabService {
+  // 执行动作（投票/表单/任务/文档增量等）
+  rpc PerformAction(ActionEnvelope) returns (ActionAck);
+
+  // 订阅动作（类别/类型过滤）
+  rpc SubscribeActions(ActionSubscribe) returns (stream ActionEnvelope);
+}
+
+// ========== 四、在线状态/输入中 ==========
+service PresenceService {
+  rpc UpdatePresence(PresenceUpdate) returns (AckData);
+  rpc Typing(TypingStart) returns (AckData);
+  rpc SubscribePresence(PresenceSubscribeReq) returns (stream PresenceUpdate);
+}
+
+message PresenceSubscribeReq {
+  repeated string user_ids   = 1;
+  repeated string guild_ids  = 2;
+  repeated string channel_ids= 3;
+  repeated string thread_ids = 4;
+  bool   include_typing      = 5;
+}
+
+// ========== 五、检索/归档（可选，按需实现） ==========
+service ArchiveService {
+  // 按标签/文本检索（结合 rich/embed/entity/automod）
+  rpc Search(SearchReq) returns (SearchResp);
+}
+
+message SearchReq {
+  string q                  = 1;  // 关键字/DSL
+  repeated string tags      = 2;
+  repeated int32 content_types = 3;
+  string guild_id           = 10;
+  string channel_id         = 11;
+  string thread_id          = 12;
+  int64  time_from          = 13;
+  int64  time_to            = 14;
+  Page   page               = 20;
+}
+message SearchResp {
+  repeated MessageData items = 1;
+  PageResp page              = 2;
+}

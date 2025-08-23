@@ -1,0 +1,38 @@
+syntax = "proto3";
+package message.v1;
+option go_package = "PProject/gen/message;messagepb";
+
+// 通用ACK
+message AckData {
+  string ack_id      = 1;   // 对应请求携带的 ack_id 或由服务端生成
+  bool   ok          = 2;   // 是否成功
+  string code        = 3;   // 错误/结果码（如 OK/CONFLICT/FORBIDDEN/INVALID/RATE_LIMIT）
+  string message     = 4;   // 人类可读信息
+  int64  server_time = 5;   // 服务器时间（ms）
+  string correlation_id = 6;// 关联ID（用于串联请求/回执/日志）
+}
+
+// 通用分页
+message Page {
+  int32  size    = 1;  // 每页大小
+  string cursor  = 2;  // 游标（服务端生成）
+  bool   forward = 3;  // true=向新消息方向翻页；false=向旧消息方向
+}
+
+message PageResp {
+  string next_cursor = 1; // 下一页游标，空表示到底
+  bool   has_more    = 2;
+}
+
+// 错误码（简化，细化可扩展）
+enum ErrorCode {
+  ERROR_UNSPECIFIED = 0;
+  OK                = 1;
+  INVALID           = 2;
+  FORBIDDEN         = 3;
+  NOT_FOUND         = 4;
+  CONFLICT          = 5;  // 版本冲突/幂等冲突
+  RATE_LIMIT        = 6;
+  INTERNAL          = 7;
+  UNAVAILABLE       = 8;
+}

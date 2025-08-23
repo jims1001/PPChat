@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "PProject/gen/message;messagepb";
+
+// Presence / 状态
+message PresenceUpdate {
+  string user_id = 1;
+  string status  = 2; // online/offline/idle/dnd
+  string activity = 3; // "Playing Game", "Streaming"…
+}
+
+// Typing / 正在输入
+message TypingStart {
+  string channel_id = 1;
+  string user_id    = 2;
+  int64  started_at = 3;
+}
+
+// Intents 订阅（按位订阅事件）
+message GatewaySubscribe {
+  uint64 intents = 1;              // 位图
+  repeated string guild_ids = 2;   // 选择性订阅的服务器
+  repeated string channel_ids = 3; // 选择性订阅的频道
+}
+
+// 分片信息（Sharding）
+message ShardInfo {
+  int32 shard_id   = 1;
+  int32 shard_count= 2;
+}
+
+// 限速提示（Rate Limit Hints）
+message RateHint {
+  string bucket   = 1;
+  int32  remaining= 2;
+  int64  reset_at = 3;
+}
+
+// 权限/角色（RBAC）
+message PermissionOverwrite {
+  string target_id = 1; // 用户或角色ID
+  uint64 allow     = 2; // 允许位图
+  uint64 deny      = 3; // 拒绝位图
+}
+
+message Role {
+  string role_id    = 1;
+  string name       = 2;
+  uint64 permissions= 3;
+  int32  position   = 4;
+}

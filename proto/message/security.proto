@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "PProject/gen/message;messagepb";
+
+// 完整性/签名/加密算法（后续可启用）
+enum HashAlg {
+  HASHALG_UNSPECIFIED = 0;
+  HASHALG_SHA256      = 1;
+  HASHALG_BLAKE3      = 2;
+}
+
+enum SigAlg {
+  SIGALG_UNSPECIFIED = 0;
+  SIGALG_ED25519     = 1;
+  SIGALG_ECDSA_P256  = 2;
+}
+
+enum EncAlg {
+  ENCALG_UNSPECIFIED       = 0;
+  ENCALG_XCHACHA20POLY1305 = 1;
+  ENCALG_AES256_GCM        = 2;
+}

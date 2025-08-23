@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "PProject/gen/message;messagepb";
+import "google/protobuf/any.proto";
+
+// ======================================================================
+// collab.proto —— 动态扩展的协作动作协议
+// 采用 “信封 ActionEnvelope + Any 负载” 的可插拔模型。
+// ======================================================================
+
+// 轻量动作类别（可观测/粗粒度路由）。真正类型以 Any.type_url 为准。
+enum ActionKind {
+  ACTION_KIND_UNSPECIFIED = 0;
+  ACTION_KIND_VOTE        = 1;  // 投票类
+  ACTION_KIND_FORM        = 2;  // 表单/问卷
+  ACTION_KIND_TASK        = 3;  // 任务/看板/流程
+  ACTION_KIND_GAME        = 4;  // 小游戏/对局
+  ACTION_KIND_DOC         = 5;  // 文档/白板/协作编辑
+  ACTION_KIND_CUSTOM      = 15; // 自定义/其他
+}
+
+// 动作信封：统一承载各种协作操作，动态扩展的核心。
+message ActionEnvelope {
+  // —— 目标与因果 —— //
+  string target_client_msg_id = 1;   // 作用对象：通常是发起的协作消息（如投票/表单原消息）
+  string parent_action_id     = 2;   // 因果链：父动作ID（例如对某次提交的修改/撤销）
+  string reply_to_action_id   = 3;   // 直接回复的动作ID（与 parent 不同的引用语义）
+
+  // —— 参与者与时间 —— //
+  string actor_id             = 4;   // 执行动作的用户
+  int64  acted_at             = 5;   // 毫秒时间戳
+  string tenant_id            = 6;   // 租户/空间（多租户隔离）
+  string guild_id             = 7;   // 公域服务器（Discord 类）
+  string channel_id           = 8;   // 频道
+  string thread_id            = 9;   // 话题/子线程
+
+  // —— 幂等/事务/关联 —— //
+  string action_id            = 10;  // 本动作的唯一ID（服务器生成/返回）
+  string idempotency_key      = 11;  // 客户端生成的幂等键（窗口期重复提交只生效一次）
+  string txn_id               = 12;  // 事务ID（跨多个动作的原子提交/回滚）
+  string correlation_id       = 13;  // 关联ID（把请求/回调/日志串起来）
+
+  // —— 版本/序列 —— //
+  int64  version              = 14;  // 目标对象的期望版本（乐观锁），服务端可返回冲突
+  int64  seq_hint             = 15;  // 客户端侧临时序号提示（网关可忽略）
+
+  // —— 路由/观测 —— //
+  ActionKind kind             = 16;  // 粗粒度类别（可选，便于观测）
+  string     type_url         = 17;  // Any 的类型URL（冗余写入，便于直观路由与调试）
+
+  // —— 负载（动态扩展的关键） —— //
+  //   约定：payload 的具体 message 通过 type_url 唯一标识，
+  //   如 "type.openim/vote.VoteActionV1" 或 "type.openim/form.FormSubmitV1"
+  google.protobuf.Any payload = 18;  // 动作内容（任意 message）
+
+  // —— 可选：协作编辑/增量（JSON Patch 或 CRDT 操作） —— //
+  DeltaOp delta = 19;
+
+  // —— 标签与扩展 —— //
+  repeated string tags = 20;                  // 检索/审计标签
+  map<string,string>  meta = 21;             // key-value 轻量扩展（小体量）
+  bytes               ext_blob = 22;         // 大扩展块（二进制、自定义协议）
+
+  // —— 客户端上下文（便于调试/灰度） —— //
+  string device_id   = 30;
+  string platform    = 31;   // iOS/Android/Web/PC
+  string app_version = 32;
+  string locale      = 33;   // zh-CN/en-US
+
+  // —— 预留字段段 —— //
+  reserved 100 to 129; // 未来升级使用
+}
+
+// 协作编辑/增量操作（可选）
+// 同时兼容 JSON Patch 与 CRDT 的载体：二选一或同时附带（视业务需要）。
+message DeltaOp {
+  enum Format {
+    DELTA_FORMAT_UNSPECIFIED = 0;
+    DELTA_FORMAT_JSON_PATCH  = 1;  // RFC 6902 JSON Patch
+    DELTA_FORMAT_CRDT        = 2;  // 任意 CRDT 序列化
+  }
+  string doc_id   = 1;     // 文档/白板/数据对象ID
+  Format format   = 2;     // 增量格式
+  string json_patch = 3;   // JSON Patch 字符串（当 format=JSON_PATCH）
+  bytes  crdt_blob  = 4;   // CRDT 二进制（当 format=CRDT）
+  int64  base_version = 5; // 基线版本（便于冲突检测/合并）
+  int64  applied_at   = 6; // 应用时间（ms）
+}
+
+// 动作响应：用于 ACK/回执
+message ActionAck {
+  string action_id       = 1;  // 成功动作ID
+  string target_client_msg_id = 2;
+  int64  new_version     = 3;  // 服务端合并后的最新版本
+  int64  server_time     = 4;  // 服务器时间戳（ms）
+  string correlation_id  = 5;  // 与请求对应
+}
+
+// 动作错误：用于冲突/权限/校验失败等
+message ActionError {
+  string correlation_id  = 1;
+  string code            = 2;  // "CONFLICT" / "FORBIDDEN" / "INVALID" / ...
+  string message         = 3;  // 错误描述
+  string detail          = 4;  // 细节
+  int64  server_time     = 5;
+  // 可选：返回当前服务端视角的状态片段（例如服务端版本、已存在的选择等）
+  google.protobuf.Any server_view = 6;
+}
+
+// 订阅协作动作（例如服务端推送特定 kind/type 的变更或回执）
+message ActionSubscribe {
+  repeated ActionKind kinds = 1;    // 订阅某些类别
+  repeated string     type_urls = 2;// 精确订阅某些 Any 类型
+  repeated string     guild_ids = 3;
+  repeated string     channel_ids = 4;
+  repeated string     thread_ids  = 5;
+  bool     ack_required = 10;       // 是否需要 ACK 动作推送
+}
+
+// ======================================================================
+// 示例负载类型（可选）：以独立的 message 实现 “强类型” 动作，
+// 然后通过 Any 装入 ActionEnvelope.payload。
+// ======================================================================
+
+// —— 投票示例 —— //
+message VoteActionV1 {
+  string vote_id = 1;                       // 投票ID
+  repeated string selected_option_ids = 2;  // 本次选择
+  bool   revoke  = 3;                       // 撤销投票
+  // 拓展：匿名投票/多选限制/截止时间等
+}
+
+// —— 表单示例 —— //
+message FormSubmitV1 {
+  string form_id = 1;
+  repeated FormFieldKV fields = 2;          // 本次提交的字段
+  bool   finalize = 3;                      // 是否提交最终版
+}
+
+message FormFieldKV {
+  string field_id = 1;
+  string value    = 2; // 建议规范化为字符串；需要结构化时可改 bytes + type_url
+}
+
+// —— 任务/流程示例 —— //
+message TaskUpdateV1 {
+  string task_id   = 1;
+  string action    = 2; // "create" / "assign" / "move" / "done" ...
+  map<string,string> fields = 3; // 任意字段更新
+}
+
+// —— 文档/白板编辑：也可直接使用 DeltaOp 搭配 Any —— //
+message DocEditV1 {
+  string doc_id = 1;
+  DeltaOp delta = 2; // 推荐用 DeltaOp
+}
+
+// ======================================================================
+// 兼容保留（旧结构）：建议迁移到 ActionEnvelope
+// ======================================================================
+
+message CoopAction {
+  // ⚠️ 已弃用：用 ActionEnvelope 替代
+  string target_client_msg_id = 1;
+  int64  version              = 2;
+  oneof action {
+    VoteActionV1  vote_action   = 10;
+    FormSubmitV1  form_submit   = 11;
+    TaskUpdateV1  task_update   = 12;
+    DocEditV1     doc_edit      = 13;
+  }
+  string actor_id             = 20;
+  int64  acted_at             = 21;
+  string ext                  = 22;
+
+  // 兼容字段：未来不再扩展
+  reserved 100 to 109;
+}

@@ -56,9 +56,9 @@ func (m *Manager) run() {
 			continue
 		}
 
-		// health check loop
+		// 健康检查
 		go m.healthLoop()
-		// periodic ping loop
+		// 定时 ping
 		go m.pingLoop()
 
 		return

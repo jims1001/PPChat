@@ -1,0 +1,29 @@
+run:
+  timeout: 3m
+  tests: true
+  skip-dirs:
+    - vendor
+
+linters:
+  enable:
+    - staticcheck       # Advanced static analysis (nil checks, etc.)
+    - govet             # Go's official vet tool
+    - errcheck          # Check for ignored errors
+    - revive            # Style and code structure linter
+    - unused            # Detect unused variables
+    - gocritic          # Detect suspicious patterns
+    - gosimple          # Find simplifications
+    - typecheck         # Basic type validation
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+
+  revive:
+    severity: warning
+    ignore-generated-header: true
+    rules:
+      - name: var-naming
+      - name: indent-error-flow
+      - name: unexported-return
+

@@ -1,0 +1,233 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "PProject/gen/message;messagepb";
+import "message/rich.proto";
+
+
+// ========================= MessageData（= MsgStruct） =========================
+message MessageData {
+  // —— 标识/时间/路由 —— //
+  string client_msg_id        = 1;
+  string server_msg_id        = 2;
+  int64  create_time          = 3;
+  int64  send_time            = 4;
+  int32  session_type         = 5;
+  string send_id              = 6;
+  string recv_id              = 7;
+  int32  msg_from             = 8;
+  int32  content_type         = 9;
+  int32  sender_platform_id   = 10;
+  string sender_nickname      = 11;
+  string sender_face_url      = 12;
+  string group_id             = 13;
+  string content              = 14;
+  int64  seq                  = 15;
+  bool   is_read              = 16;
+  int32  status               = 17;
+
+  // —— 推送/扩展 —— //
+  OfflinePushInfo offline_push  = 18;
+  string          attached_info = 19;
+  string          ex            = 20;
+  string          local_ex      = 21;
+
+  // —— 消息元素（多态内容） —— //
+  TextElem           text_elem            = 30;
+  CardElem           card_elem            = 31;
+  PictureElem        picture_elem         = 32;
+  SoundElem          sound_elem           = 33;
+  VideoElem          video_elem           = 34;
+  FileElem           file_elem            = 35;
+  MergeElem          merge_elem           = 36;
+  AtTextElem         at_text_elem         = 37;
+  FaceElem           face_elem            = 38;
+  LocationElem       location_elem        = 39;
+  CustomElem         custom_elem          = 40;
+  QuoteElem          quote_elem           = 41;
+  NotificationElem   notification_elem    = 42;
+  AdvancedTextElem   advanced_text_elem   = 43;
+  TypingElem         typing_elem          = 44;
+  AttachedInfoElem   attached_info_elem   = 45;
+  MarkdownTextElem   markdown_text_elem   = 46;
+
+  // —— 协作/审计/公域扩展 —— //
+  bool   is_edited      = 60;
+  int64  edited_at      = 61;
+  int32  edit_version   = 62;
+  int64  expire_at      = 63;
+  string access_level   = 64;  // private/group/public
+  string trace_id       = 65;
+  string session_id     = 66;
+  repeated string tags  = 67;
+
+  // —— Guild/Channel/Thread/引用 & 富媒体 —— //
+  string guild_id       = 100;
+  string channel_id     = 101;
+  string thread_id      = 102;
+  string reply_to       = 103;
+  bool   is_ephemeral   = 104;
+  RichMessage rich      = 105;
+  repeated AutoModSignal automod = 110;
+}
+
+// ================== 推送/业务辅助 ==================
+message OfflinePushInfo {
+  string title   = 1;
+  string desc    = 2;
+  string ex      = 3;
+  bool   ios_badge_count_plus1 = 4;
+  string ios_category = 5;
+  string ios_sound    = 6;
+  bool   android_vivo_classification = 7;
+}
+
+message MessageReceipt {
+  string group_id     = 1;
+  string user_id      = 2;
+  repeated string msg_id_list = 3;
+  int64  read_time    = 4;
+  int32  msg_from     = 5;
+  int32  content_type = 6;
+  int32  session_type = 7;
+}
+
+message MessageRevoked {
+  string revoker_id                     = 1;
+  int32  revoker_role                   = 2;
+  string client_msg_id                  = 3;
+  string revoker_nickname               = 4;
+  int64  revoke_time                    = 5;
+  int64  source_message_send_time       = 6;
+  string source_message_send_id         = 7;
+  string source_message_sender_nickname = 8;
+  int32  session_type                   = 9;
+  int64  seq                            = 10;
+  string ex                             = 11;
+  bool   is_admin_revoke                = 12;
+}
+
+message MessageReaction {
+  string client_msg_id = 1;
+  int32  reaction_type = 2;
+  int32  counter       = 3;
+  string user_id       = 4;
+  string group_id      = 5;
+  int32  session_type  = 6;
+  string info          = 7;
+}
+
+// ================== 媒体基础结构 ==================
+message ImageInfo { int32 width = 1; int32 height = 2; string type = 3; int64 size = 4; }
+
+message PictureBaseInfo {
+  string uuid = 1; string type = 2; int64 size = 3; int32 width = 4; int32 height = 5; string url = 6;
+}
+
+message SoundBaseInfo {
+  string uuid = 1; string sound_path = 2; string source_url = 3; int64 data_size = 4; int64 duration = 5; string sound_type = 6;
+}
+
+message VideoBaseInfo {
+  string video_path = 1; string video_uuid = 2; string video_url = 3; string video_type = 4; int64 video_size = 5; int64 duration = 6;
+  string snapshot_path = 7; string snapshot_uuid = 8; int64 snapshot_size = 9; string snapshot_url = 10; int32 snapshot_width = 11; int32 snapshot_height = 12; string snapshot_type = 13;
+}
+
+message FileBaseInfo {
+  string file_path = 1; string uuid = 2; string source_url = 3; string file_name = 4; int64 file_size = 5; string file_type = 6;
+}
+
+// ================== 各类 Elem ==================
+message TextElem { string content = 1; }
+
+message CardElem {
+  string user_id  = 1; string nickname = 2; string face_url = 3; string ex = 4;
+}
+
+message PictureElem {
+  string source_path = 1; PictureBaseInfo source_picture = 2; PictureBaseInfo big_picture = 3; PictureBaseInfo snapshot_picture = 4;
+}
+
+message SoundElem {
+  string uuid = 1; string sound_path = 2; string source_url = 3; int64 data_size = 4; int64 duration = 5; string sound_type = 6;
+}
+
+message VideoElem {
+  string video_path = 1; string video_uuid = 2; string video_url = 3; string video_type = 4; int64 video_size = 5; int64 duration = 6;
+  string snapshot_path = 7; string snapshot_uuid = 8; int64 snapshot_size = 9; string snapshot_url = 10; int32 snapshot_width = 11; int32 snapshot_height = 12; string snapshot_type = 13;
+}
+
+message FileElem {
+  string file_path = 1; string uuid = 2; string source_url = 3; string file_name = 4; int64 file_size = 5; string file_type = 6;
+}
+
+message MergeElem {
+  string title = 1;
+  repeated string abstract_list = 2;
+  repeated MessageData multi_message = 3;
+  repeated MessageEntity message_entity_list = 4;
+}
+
+message AtTextElem {
+  string text = 1;
+  repeated string at_user_list = 2;
+  repeated AtInfo at_users_info = 3;
+  MessageData quote_message = 4;
+  bool is_at_self = 5;
+}
+
+message FaceElem { int32 index = 1; string data = 2; }
+
+message LocationElem { string description = 1; double longitude = 2; double latitude = 3; }
+
+message CustomElem { string data = 1; string description = 2; string extension = 3; }
+
+message QuoteElem {
+  string text = 1;
+  MessageData quote_message = 2;
+  repeated MessageEntity message_entity_list = 3;
+}
+
+message NotificationElem { string detail = 1; }
+
+message AdvancedTextElem {
+  string text = 1;
+  repeated MessageEntity message_entity_list = 2;
+}
+
+message TypingElem { string msg_tips = 1; }
+
+message MarkdownTextElem { string content = 1; }
+
+// ================== 附加信息/进度/实体 ==================
+message AttachedInfoElem {
+  GroupHasReadInfo group_has_read_info = 1;
+  bool is_private_chat = 2;
+  int32 burn_duration = 3;
+  int64 has_read_time = 4;
+  repeated MessageEntity message_entity_list = 5;
+  bool is_encryption = 6;
+  bool in_encrypt_status = 7;
+  UploadProgress progress = 8;
+}
+
+message SystemEvent {
+  string event_type = 1;               // "kick" / "transfer" / "mute" ...
+  string reason     = 2;
+  map<string,string> data = 3;         // 附带数据
+}
+
+message UploadProgress { int64 total = 1; int64 save = 2; int64 current = 3; string upload_id = 4; }
+
+message ReactionElem {
+  int32 counter = 1; int32 type = 2; repeated UserReactionElem user_reaction_list = 3; bool can_repeat = 4; string info = 5;
+}
+
+message UserReactionElem { string user_id = 1; int32 counter = 2; string info = 3; }
+
+message MessageEntity { string type = 1; int32 offset = 2; int32 length = 3; string url = 4; string ex = 5; }
+
+message GroupHasReadInfo { repeated string has_read_user_id_list = 1; int32 has_read_count = 2; int32 group_member_count = 3; }
+
+message AtInfo { string at_user_id = 1; string group_nickname = 2; }

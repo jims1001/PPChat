@@ -8,5 +8,46 @@ go get google.golang.org/grpc@v1.63.2
 go get google.golang.org/protobuf@v1.34.2
 
 
+
+protoc \                                                                                                                                                 1 ↵  15:35:48 
+  -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/message.proto
+
+
+
+# 只生成 base（common/frame/message）
+protoc -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/common.proto proto/message/frame.proto proto/message/message.proto
+
+# 只生成 rich
+protoc -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/rich.proto
+
+# 只生成 collab
+protoc -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/collab.proto
+
+# 只生成 security
+protoc -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/security.proto
+
+# 只生成 msgsess
+protoc -I proto \
+  --go_out=./gen --go_opt=paths=source_relative \
+  --go-grpc_out=./gen --go-grpc_opt=paths=source_relative \
+  proto/message/session.proto
+
+
+
 go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.4.0

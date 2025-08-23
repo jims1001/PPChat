@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package message.v1;
+option go_package = "PProject/gen/message;messagepb";
+
+// 富卡片/按钮/附件/贴纸/表情（Discord/Telegram风格）
+message RichMessage {
+  repeated Embed      embeds      = 1;
+  repeated Component  components  = 2;
+  repeated Attachment attachments = 3;
+  repeated Sticker    stickers    = 4;
+  repeated Emoji      emojis      = 5;
+}
+
+// —— Embeds —— //
+message Embed {
+  string title = 1;
+  string description = 2;
+  string url = 3;
+  string color = 4; // "#RRGGBB"
+  repeated EmbedField fields = 5;
+  string thumbnail_url = 6;
+  string image_url = 7;
+  string footer = 8;
+}
+
+message EmbedField {
+  string name = 1;
+  string value = 2;
+  bool   inline = 3;
+}
+
+// —— Components（交互组件） —— //
+message Component {
+  enum Type { ACTION_ROW = 0; BUTTON = 1; SELECT = 2; INPUT = 3; }
+  Type  type = 1;
+  string custom_id = 2;     // 回传给交互事件
+  string label = 3;         // 按钮标题或输入提示
+  string style = 4;         // primary/secondary/danger/link...
+  bool   disabled = 5;
+  repeated ComponentOption options = 6; // 下拉菜单选项
+}
+
+message ComponentOption {
+  string value = 1;
+  string label = 2;
+  string description = 3;
+}
+
+// —— 附件/表情/贴纸 —— //
+message Attachment {
+  string attachment_id = 1; // CDN对象ID/URL
+  string filename = 2;
+  int64  size = 3;
+  string mime = 4;
+  int32  width = 5;
+  int32  height = 6;
+  bool   spoiler = 7;       // 需点击才显示
+}
+
+message Sticker { string id = 1; string name = 2; string url = 3; }
+message Emoji   { string id = 1; string name = 2; bool animated = 3; }
+
+// —— 内容风控信号 & 举报 —— //
+message AutoModSignal {
+  string policy_id = 1;   // 规则ID
+  string hit_type  = 2;   // spam/profanity/porn/violence/abuse/…
+  float  score     = 3;   // 置信度
+  string matched   = 4;   // 触发片段
+}
+
+message Report {
+  string reporter_id   = 1;
+  string target_msg_id = 2;
+  string reason        = 3;
+  int64  ts            = 4;
+}

@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package message.v1;
+
+option go_package = "PProject/gen/message;messagepb";
+
+import "google/protobuf/any.proto";
+import "message/message.proto";
+import "message/security.proto";
+import "message/session.proto";
+import "message/collab.proto";
+
+
+// ==========================================================
+//                   传输帧（增强版，安全+扩展）
+// ==========================================================
+message MessageFrameData {
+  // 帧类型（保持兼容，同时可继续扩展）
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    DATA             = 1;  // 业务消息：payload = messageData
+    REGISTER         = 2;  // 上线
+    UNREGISTER       = 3;  // 下线
+    DELIVER          = 4;  // 服务端主动下发
+    PING             = 5;  // 心跳
+    MESSAGE_UPDATE   = 6;  // 编辑/版本更新
+    MESSAGE_ACTION   = 7;  // 协作动作（表单/投票等）
+    SYSTEM_EVENT     = 8;  // 系统事件（转接/强制下线等）
+  }
+
+  // 传输服务质量
+  enum QoS {
+    QOS_AT_MOST_ONCE  = 0; // 最多一次
+    QOS_AT_LEAST_ONCE = 1; // 至少一次
+    QOS_EXACTLY_ONCE  = 2; // 恰好一次
+  }
+
+  // 优先级
+  enum Priority {
+    PRIORITY_DEFAULT = 0;
+    PRIORITY_LOW     = 1;
+    PRIORITY_HIGH    = 2;
+    PRIORITY_URGENT  = 3;
+  }
+
+  // —— 必要头字段 —— //
+  Type    type        = 1;   // 帧类型
+  string  from        = 2;   // 发送方（建议由网关注入）
+  string  to          = 3;   // 接收方 userID/groupID
+  int64   ts          = 4;   // 发送毫秒时间戳
+  string  gateway_id  = 5;   // 网关节点
+  string  conn_id     = 6;   // 连接ID
+  string  tenant_id   = 7;   // 多租户隔离
+  string  app_id      = 8;   // 应用/业务ID
+
+  // —— 传输策略/风控 —— //
+  QoS     qos         = 10;  // 传输QoS
+  Priority priority   = 11;  // 优先级
+  bool    ack_required= 12;  // 是否需要ACK
+  string  ack_id      = 13;  // ACK对应ID
+  string  dedup_id    = 14;  // 幂等ID（去重窗口唯一）
+  string  nonce       = 15;  // 随机数（配合 ts 防重放）
+  int64   expires_at  = 16;  // 过期时间（ms）
+
+  // —— 调试/审计 —— //
+  string  trace_id    = 20;  // 链路追踪
+  string  session_id  = 21;  // 会话ID（客服/协作）
+  string  device_id   = 22;  // 设备ID
+  string  platform    = 23;  // iOS/Android/Web/PC
+  string  app_version = 24;  // 客户端版本
+  string  locale      = 25;  // zh-CN/en-US
+  map<string,string> meta = 26; // 上下文键值
+
+  // —— 载荷（三选一：明文/任意/密文；当前推荐用 payload 明文） —— //
+  oneof body {
+    MessageData               payload            = 30; // 明文业务消息
+    google.protobuf.Any       any_payload        = 31; // 未来扩展/异构消息体
+    bytes                     encrypted_payload  = 32; // 预留加密载荷（后启用）
+  }
+
+  // —— 完整性&签名（可选，先不启用也不影响） —— //
+  HashAlg hash_alg      = 40;
+  bytes   payload_hash  = 41;  // 对 body 做 hash（规范化序列化后）
+  SigAlg  sig_alg       = 42;
+  string  key_id        = 43;  // 用于查找公钥
+  bytes   signature     = 44;  // 对 (header+hash) 做签名
+
+  // —— 加密头（预留；encrypted_payload 使用时启用） —— //
+  EncAlg  enc_alg       = 50;
+  string  enc_key_id    = 51;
+  bytes   enc_ephemeral_pub = 52; // 例如X25519短期公钥
+  bytes   enc_nonce     = 53;
+
+  // —— 版本/演进 —— //
+  string  api_version   = 60;  // "v1"
+  int64   schema_version= 61;  // 1, 2, 3…
+  int64   version       = 62;  // 协作/编辑版本（与 MessageData.edit_version 对应）
+
+  // —— 公域/网关能力 —— //
+  uint64   intents      = 90;         // 订阅的事件意图位图（Discord风格）
+  ShardInfo shard       = 91;         // 分片信息
+  RateHint  rate        = 92;         // 限速提示
+  int64     stream_seq  = 93;         // 下发连续序号（断点续传/重放控制）
+
+  // —— 协作动作/系统事件（与 type 搭配使用） —— //
+  CoopAction  coop_action  = 70; // type=MESSAGE_ACTION
+  SystemEvent system_event = 71; // type=SYSTEM_EVENT
+
+  // 预留字段位防止未来冲突
+  reserved 100 to 119;
+}
