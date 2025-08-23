@@ -2,6 +2,7 @@ package main
 
 import (
 	pb "PProject/gen/gateway"
+	global "PProject/global"
 	"PProject/module/user"
 	"PProject/service/chat"
 	"PProject/service/storage"
@@ -15,6 +16,10 @@ import (
 )
 
 func main() {
+
+	// 配置生成的ids
+
+	global.ConfigIds()
 
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")

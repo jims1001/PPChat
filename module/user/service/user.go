@@ -1,7 +1,9 @@
 package service
 
 import (
+	config "PProject/global"
 	usermodel "PProject/module/user/model"
+	mgo "PProject/service/mgo"
 	jwtlib "PProject/tools/security"
 	"context"
 	"errors"
@@ -31,7 +33,8 @@ type UserSessionKey struct {
 	DeviceID   string `json:"device_id"`
 }
 
-func Login(opts jwtlib.Options, in LoginParams) (usermodel.UserSession, error) {
+func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
+	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
 	now := in.Now
 	if now.IsZero() {
 		now = time.Now()
@@ -46,6 +49,7 @@ func Login(opts jwtlib.Options, in LoginParams) (usermodel.UserSession, error) {
 		return usermodel.UserSession{}, err
 	}
 
+	key := UserSessionKey{UserId: in.UserID, DeviceType: in.DeviceType, DeviceID: in.DeviceID}
 	rec := usermodel.UserSession{
 		SessionID:       in.SessionID,
 		UserID:          in.UserID,
@@ -65,6 +69,12 @@ func Login(opts jwtlib.Options, in LoginParams) (usermodel.UserSession, error) {
 		CreateTime: now,
 		UpdateTime: now,
 	}
+
+	err = ReLoginArchiveAndReplace(ctx, mgo.GetDB(), key, rec)
+	if err != nil {
+		return usermodel.UserSession{}, err
+	}
+
 	return rec, nil
 }
 
