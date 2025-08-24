@@ -5,7 +5,6 @@ import (
 	global "PProject/global"
 	"PProject/module/user"
 	"PProject/service/chat"
-	"PProject/service/storage"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -20,6 +19,8 @@ func main() {
 	// 配置生成的ids
 
 	global.ConfigIds()
+	global.ConfigRedis()
+	global.ConfigMgo()
 
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
@@ -29,22 +30,6 @@ func main() {
 	routerAddr := os.Getenv("ROUTER_ADDR")
 	if routerAddr == "" {
 		routerAddr = "127.0.0.1:50051"
-	}
-
-	// 2) Init Redis
-	addr := os.Getenv("REDIS_ADDR")
-	if addr == "" {
-		addr = "127.0.0.1:7001"
-	}
-
-	password := os.Getenv("REDIS_PASSWORD")
-	if password == "" {
-		password = "password"
-	}
-	if err := storage.InitRedis(storage.Config{
-		Addr: addr, Password: password, DB: 0,
-	}); err != nil {
-		log.Fatalf("init redis: %v", err)
 	}
 
 	conn := chat.NewConnManager()
@@ -85,6 +70,7 @@ func main() {
 	r := gin.New()
 	r.GET("/chat", g.HandleWS) // e.g. ws://localhost:8080/chat?user=A&to=B
 	r.POST("/login", user.HandlerLogin)
+	r.POST("/check", user.HandlerCheck)
 	log.Println("[HTTP] Listening on :8080")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)

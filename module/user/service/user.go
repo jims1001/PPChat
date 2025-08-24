@@ -2,14 +2,19 @@ package service
 
 import (
 	config "PProject/global"
+	global "PProject/global"
 	usermodel "PProject/module/user/model"
-	mgo "PProject/service/mgo"
+	"PProject/service/mgo"
+	"PProject/service/storage/redis"
+	"PProject/tools/errs"
 	jwtlib "PProject/tools/security"
 	"context"
 	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 	"time"
 )
 
@@ -49,7 +54,11 @@ func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
 		return usermodel.UserSession{}, err
 	}
 
-	key := UserSessionKey{UserId: in.UserID, DeviceType: in.DeviceType, DeviceID: in.DeviceID}
+	key := UserSessionKey{UserId: in.UserID,
+		DeviceType: in.DeviceType,
+		DeviceID:   in.DeviceID,
+	}
+
 	rec := usermodel.UserSession{
 		SessionID:       in.SessionID,
 		UserID:          in.UserID,
@@ -70,7 +79,7 @@ func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
 		UpdateTime: now,
 	}
 
-	err = ReLoginArchiveAndReplace(ctx, mgo.GetDB(), key, rec)
+	err = ReLoginArchiveAndReplace(ctx, key, rec)
 	if err != nil {
 		return usermodel.UserSession{}, err
 	}
@@ -78,54 +87,175 @@ func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
 	return rec, nil
 }
 
-func Verify(opts jwtlib.Options, token string, expectedHash string) (*jwtlib.JWTClaims, error) {
-	return jwtlib.Verify(opts, token, expectedHash)
+func Verify(ctx context.Context,
+	tokenStr string, tokenHash string) (*usermodel.UserSession, error) {
+	// A) JWT 签名/基本 claims 校验（确保不是伪造；不决定是否可用）
+	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
+	_, err := jwtlib.Verify(opts, tokenStr, tokenHash)
+	if err != nil {
+		return nil, err // 签名/格式错误，直接拒绝
+	}
+
+	rk := fmt.Sprintf(global.UserSessionKey, tokenHash) // e.g. "ts:%s"
+
+	rdb := redis.GetRedis()
+
+	// C) 先查 Redis
+	v, err := rdb.Get(ctx, rk).Result()
+	if err == nil {
+		if v == "-" {
+			// 负缓存命中
+			return nil, &errs.ErrTokenExpired
+		}
+		// 命中 sid → 为避免绕过撤销，做一次最小回源校验（强一致需求更高可保留；需要极致性能可去掉）
+		var s usermodel.UserSession
+		// 读超时
+		cctx, cancel := context.WithTimeout(ctx, 300*time.Millisecond)
+		defer cancel()
+		coll := s.Collection()
+
+		// 索引: { session_id:1, is_valid:1, expire_time:1 }
+		err = coll.FindOne(cctx, bson.M{
+			"session_id": v, "is_valid": true, "expire_time": bson.M{"$gt": time.Now()},
+		}).Decode(&s)
+		if err == nil {
+			return &s, nil
+		}
+		// Redis 命中但 Mongo 未命中：可能被撤销/过期 → 写负缓存，返回过期
+		_ = rdb.Set(ctx, rk, "-", 30*time.Second).Err()
+		return nil, &errs.ErrTokenExpired
+	}
+
+	// D) 回源 Mongo（权威）
+	var s usermodel.UserSession
+	// 索引: { access_token_hash:1, is_valid:1 }
+	cctx, cancel := context.WithTimeout(ctx, 600*time.Millisecond)
+	defer cancel()
+
+	db := mgo.GetDB()
+	coll := db.Collection("user_session")
+
+	err = coll.FindOne(cctx, bson.M{
+		"access_token_hash": tokenHash, // 统一：Mongo 也存裸 hex
+		"is_valid":          true,
+		"expire_time":       bson.M{"$gt": time.Now()},
+	}).Decode(&s)
+
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// 放负缓存，防止打穿
+			_ = rdb.Set(ctx, rk, "-", 30*time.Second).Err()
+			return nil, &errs.ErrTokenExpired
+		}
+		return nil, err
+	}
+
+	// E) 回写 Redis（TTL = 剩余寿命）
+	ttl := time.Until(s.ExpireTime)
+	if ttl <= 0 {
+		// 防御：Mongo 刚好过期边界
+		_ = rdb.Set(ctx, rk, "-", 30*time.Second).Err()
+		return nil, &errs.ErrTokenExpired
+	}
+	_ = rdb.Set(ctx, rk, s.SessionID, ttl).Err()
+	return &s, nil
 }
 
-func ReLoginArchiveAndReplace(ctx context.Context, db *mongo.Database, key UserSessionKey, newRec usermodel.UserSession) error {
-	sess, err := db.Client().StartSession()
-	if err != nil {
-		return err
+func ReLoginArchiveAndReplace(ctx context.Context,
+
+	key UserSessionKey,
+	newRec usermodel.UserSession) error {
+
+	var old *usermodel.UserSession
+
+	session := usermodel.UserSession{}
+	coll := session.Collection()
+
+	logSession := usermodel.UserSessionLog{}
+	logColl := logSession.Collection()
+
+	// 查旧
+	var o usermodel.UserSession
+	findErr := coll.FindOne(ctx, bson.M{
+		"user_id":     key.UserId,
+		"device_type": key.DeviceType,
+		"device_id":   key.DeviceID,
+		"is_valid":    true,
+	}).Decode(&o)
+
+	if findErr != nil && !errors.Is(findErr, mongo.ErrNoDocuments) {
+		return findErr
 	}
-	defer sess.EndSession(ctx)
 
-	_, err = sess.WithTransaction(ctx, func(sc mongo.SessionContext) (interface{}, error) {
-		coll := db.Collection("sessions")
-		logColl := db.Collection("user_session_log")
+	if findErr == nil {
+		old = &o
 
-		// 1) 查旧
-		var old usermodel.UserSession
-		err := coll.FindOne(sc, bson.M{
-			"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID, "is_valid": true,
-		}).Decode(&old)
-		if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, err
+		// 归档
+		newSession := usermodel.UserSession{}
+		if b, e := bson.Marshal(o); e == nil {
+			_ = bson.Unmarshal(b, &newSession)
 		}
 
-		// 2) 归档
-		if err == nil {
-			doc := bson.M{}
-			b, _ := bson.Marshal(old)
-			_ = bson.Unmarshal(b, &doc)
-			doc["archived_at"] = time.Now()
-			doc["reason"] = "relogin"
-			doc["SessionID"] = newRec.SessionID
-			if _, e := logColl.InsertOne(sc, doc); e != nil {
-				return nil, e
-			}
-		}
-
-		// 3) replace + upsert
-		newRec.UpdateTime = time.Now()
-		_, err = coll.ReplaceOne(sc,
-			bson.M{"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID},
-			newRec,
-			options.Replace().SetUpsert(true),
-		)
+		newSession.Reason = "relogin"
+		_, err := logColl.InsertOne(ctx, newSession)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return nil, nil
-	})
-	return err
+
+		o.IsValid = false
+		o.UpdateTime = time.Now()
+
+		// 建议：标记旧会话无效
+		_, err = coll.UpdateByID(ctx,
+			o.SessionID, o)
+	}
+
+	// Upsert 新会话
+	newRec.UpdateTime = time.Now()
+	res, repErr := coll.ReplaceOne(ctx,
+		bson.M{"user_id": key.UserId,
+			"device_type": key.DeviceType,
+			"device_id":   key.DeviceID},
+		newRec,
+		options.Replace().SetUpsert(true),
+	)
+
+	log.Printf("matched=%d modified=%d upserted=%v err=%v", res.MatchedCount, res.ModifiedCount, res.UpsertedID, repErr)
+
+	// 同一 ctx/sc 下读回去确认
+	var x usermodel.UserSession
+	_ = coll.FindOne(ctx, bson.M{
+		"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID,
+	}).Decode(&x)
+	log.Printf("after replace: sid=%s valid=%v exp=%v update=%v", x.SessionID, x.IsValid, x.ExpireTime, x.UpdateTime)
+
+	if repErr != nil {
+		return repErr
+	}
+
+	// 2) Redis 同步（和 Verify 一致）
+	rdb := redis.GetRedis()
+	ttl := time.Until(newRec.ExpireTime)
+
+	pipe := rdb.TxPipeline()
+
+	// 撤销旧的 token 白名单
+	if old != nil && old.AccessTokenHash != "" {
+		oldKey := fmt.Sprintf(global.UserSessionKey, old.AccessTokenHash)
+		pipe.Del(ctx, oldKey)
+	}
+
+	// 写入新的 token 白名单
+	if newRec.IsValid && ttl > 0 && newRec.AccessTokenHash != "" && newRec.SessionID != "" {
+		newKey := fmt.Sprintf(global.UserSessionKey, newRec.AccessTokenHash)
+		pipe.Set(ctx, newKey, newRec.SessionID, ttl)
+	} else if newRec.AccessTokenHash != "" {
+		// 防御：新会话无效/已过期时，删掉可能残留的键
+		newKey := fmt.Sprintf(global.UserSessionKey, newRec.AccessTokenHash)
+		pipe.Del(ctx, newKey)
+	}
+
+	_, _ = pipe.Exec(ctx) // 失败可以做补偿或日志告警
+
+	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"PProject/service/storage"
 	"context"
 	"encoding/base64"
-	"fmt"
 	"io"
 	"log"
 	"sync"
@@ -90,7 +89,7 @@ func (s *RouterService) handleDataFrame(f *pb.MessageFrame) {
 		"payload_b64": base64.StdEncoding.EncodeToString(f.GetPayload()),
 	})
 
-	fmt.Printf("get payload: %s\n", string(f.GetPayload()))
+	//fmt.Printf("get payload: %s\n", string(f.GetPayload()))
 
 	s.mu.RLock()
 	tgtGW := s.session[f.GetTo()]

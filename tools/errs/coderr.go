@@ -11,79 +11,67 @@ const stackSkip = 4
 
 var DefaultCodeRelation = newCodeRelation()
 
-type CodeError interface {
-	Code() int
-	Msg() string
-	Detail() string
+type CodeErrorI interface {
+	ECode() int
+	EMsg() string
+	DDetail() string
 	WithDetail(detail string) CodeError
 	Error
 }
 
 func NewCodeError(code int, msg string) CodeError {
-	return &codeError{
-		code: code,
-		msg:  msg,
+	return CodeError{
+		Code: code,
+		Msg:  msg,
 	}
 }
 
-type codeError struct {
-	code   int
-	msg    string
-	detail string
+type CodeError struct {
+	Code   int    `json:"code"`
+	Msg    string `json:"msg"`
+	Detail string `json:"detail,omitempty"`
 }
 
-func (e *codeError) Code() int {
-	return e.code
-}
-
-func (e *codeError) Msg() string {
-	return e.msg
-}
-
-func (e *codeError) Detail() string {
-	return e.detail
-}
-
-func (e *codeError) WithDetail(detail string) CodeError {
+func (e *CodeError) WithDetail(detail string) CodeError {
 	var d string
-	if e.detail == "" {
+	if e.Detail == "" {
 		d = detail
 	} else {
-		d = e.detail + ", " + detail
+		d = e.Detail + ", " + detail
 	}
-	return &codeError{
-		code:   e.code,
-		msg:    e.msg,
-		detail: d,
+	return CodeError{
+		Code:   e.Code,
+		Msg:    e.Msg,
+		Detail: d,
 	}
 }
 
-func (e *codeError) Wrap() error {
+func (e *CodeError) Wrap() error {
 	return stack.New(e, stackSkip)
 }
 
-func (e *codeError) clone() *codeError {
-	return &codeError{
-		code:   e.code,
-		msg:    e.msg,
-		detail: e.detail,
+func (e *CodeError) clone() *CodeError {
+	return &CodeError{
+		Code:   e.Code,
+		Msg:    e.Msg,
+		Detail: e.Detail,
 	}
 }
 
-func (e *codeError) WrapMsg(msg string, kv ...any) error {
+func (e *CodeError) WrapMsg(msg string, kv ...any) error {
 	retErr := e.clone()
 	if msg != "" || len(kv) > 0 {
 		detail := toString(msg, kv)
-		if retErr.detail == "" {
-			retErr.detail = detail
+		if retErr.Detail == "" {
+			retErr.Detail = detail
 		} else {
-			retErr.detail += ", " + detail
+			retErr.Detail += ", " + detail
 		}
 	}
 	return stack.New(retErr, stackSkip)
 }
 
-func (e *codeError) Is(err error) bool {
+func (e *CodeError) Is(err error) bool {
 	var codeErr CodeError
 	ok := errors.As(Unwrap(err), &codeErr)
 	if !ok {
@@ -95,21 +83,21 @@ func (e *codeError) Is(err error) bool {
 	if e == nil {
 		return false
 	}
-	code := codeErr.Code()
-	if e.code == code {
+	code := codeErr.Code
+	if e.Code == code {
 		return true
 	}
-	return DefaultCodeRelation.Is(e.code, code)
+	return DefaultCodeRelation.Is(e.Code, code)
 }
 
 const initialCapacity = 3
 
-func (e *codeError) Error() string {
+func (e *CodeError) Error() string {
 	v := make([]string, 0, initialCapacity)
-	v = append(v, strconv.Itoa(e.code), e.msg)
+	v = append(v, strconv.Itoa(e.Code), e.Msg)
 
-	if e.detail != "" {
-		v = append(v, e.detail)
+	if e.Detail != "" {
+		v = append(v, e.Detail)
 	}
 
 	return strings.Join(v, " ")

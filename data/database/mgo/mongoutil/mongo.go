@@ -3,7 +3,6 @@ package mongoutil
 import (
 	"PProject/data/database/utils/tx"
 	"PProject/tools/errs"
-	"PProject/tools/specialerror"
 	"context"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -11,9 +10,7 @@ import (
 )
 
 func init() {
-	if err := specialerror.AddReplace(mongo.ErrNoDocuments, errs.ErrRecordNotFound); err != nil {
-		panic(err)
-	}
+
 }
 
 // Config represents the MongoDB configuration.

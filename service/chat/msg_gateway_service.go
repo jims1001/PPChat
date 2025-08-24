@@ -4,7 +4,6 @@ import (
 	pb "PProject/gen/gateway"
 
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -34,7 +33,7 @@ func (c *MsgGatewayService) Send(ctx context.Context, in *pb.SendMessageFrame) (
 		return &pb.SendReply{Ok: false, Error: "conn_id not found"}, nil
 	}
 
-	fmt.Printf("get payload: %s\n", string(in.Payload))
+	//fmt.Printf("get payload: %s\n", string(in.Payload))
 
 	// send message
 	err := c.conn.Send(in.To, []byte(string(in.Payload)+"1"))

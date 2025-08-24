@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	mgo "PProject/service/mgo"
+	"go.mongodb.org/mongo-driver/mongo"
+	"time"
+)
 
 type UserSession struct {
 	// —— 基础标识 ——
@@ -37,4 +41,12 @@ type UserSession struct {
 	Ex         string    `bson:"ex,omitempty" json:"ex"`         // 扩展字段(JSON)
 	CreateTime time.Time `bson:"create_time" json:"create_time"` // 创建时间
 	UpdateTime time.Time `bson:"update_time" json:"update_time"` // 更新时间
+}
+
+func (sess *UserSession) GetTableName() string {
+	return "user_session"
+}
+
+func (sess *UserSession) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
 }
