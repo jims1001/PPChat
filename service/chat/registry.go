@@ -6,9 +6,11 @@ import (
 
 // each WebSocket
 type conn struct {
-	id   string
-	user string
-	send chan []byte //
+	id        string
+	snowId    string
+	userId    string
+	sessionId string
+	send      chan []byte //
 
 }
 
@@ -29,10 +31,10 @@ func (r *registry) add(c *conn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	// user 索引
-	m := r.byUser[c.user]
+	m := r.byUser[c.sessionId]
 	if m == nil {
 		m = make(map[string]*conn)
-		r.byUser[c.user] = m
+		r.byUser[c.sessionId] = m
 	}
 	m[c.id] = c
 	// conn 索引
@@ -42,10 +44,10 @@ func (r *registry) add(c *conn) {
 func (r *registry) remove(c *conn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if m := r.byUser[c.user]; m != nil {
+	if m := r.byUser[c.sessionId]; m != nil {
 		delete(m, c.id)
 		if len(m) == 0 {
-			delete(r.byUser, c.user)
+			delete(r.byUser, c.snowId)
 		}
 	}
 	delete(r.byConn, c.id)

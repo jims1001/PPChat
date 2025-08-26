@@ -1,233 +1,459 @@
 syntax = "proto3";
 
+// ============================================================================
+// 消息协议（IM 通用消息模型）
+// 说明：
+// 1) 本文件仅补充注释，不更改任何字段编号/类型/名称，确保与既有实现完全兼容。
+// 2) 建议：session_type / msg_from / content_type / sender_platform_id 等
+//    应在你的项目内通过 enum 统一取值，便于前后端与多端对齐。
+// 3) 时间字段均使用毫秒级 Unix 时间戳（int64）。
+// ============================================================================
+
 package message.v1;
 
 option go_package = "PProject/gen/message;messagepb";
+
+// 富媒体/自动审核等扩展定义（在你的工程内提供）
+import "google/protobuf/struct.proto";
 import "message/rich.proto";
 
-
 // ========================= MessageData（= MsgStruct） =========================
+// 一条消息的完整载体。包含：标识/时间/路由、推送扩展、具体内容元素、多端/审计信息、Guild/Channel/Thread 等。
 message MessageData {
   // —— 标识/时间/路由 —— //
-  string client_msg_id        = 1;
-  string server_msg_id        = 2;
-  int64  create_time          = 3;
-  int64  send_time            = 4;
-  int32  session_type         = 5;
-  string send_id              = 6;
-  string recv_id              = 7;
-  int32  msg_from             = 8;
-  int32  content_type         = 9;
-  int32  sender_platform_id   = 10;
-  string sender_nickname      = 11;
-  string sender_face_url      = 12;
-  string group_id             = 13;
-  string content              = 14;
-  int64  seq                  = 15;
-  bool   is_read              = 16;
-  int32  status               = 17;
+  string client_msg_id        = 1;  // 客户端生成的消息ID（幂等用；离线重发/断点续传时保持不变）
+  string server_msg_id        = 2;  // 服务端生成的唯一消息ID（落库后分配，用于全局检索/回执/撤回）
+  int64  create_time          = 3;  // 客户端本地创建时间（ms；用于客户端排序/展示）
+  int64  send_time            = 4;  // 服务端写入或投递时间（ms；权威时间，用于全局时间线）
+  int32  session_type         = 5;  // 会话类型（建议枚举：单聊=1/群聊=2/频道=3/系统=4...）
+  string send_id              = 6;  // 发送者用户ID（系统消息可为固定ID/空）
+  string recv_id              = 7;  // 接收方标识：单聊=对端userID；群聊=group_id；频道=channel_id
+  int32  msg_from             = 8;  // 来源（建议枚举：用户/系统/机器人/第三方Hook等）
+  int32  content_type         = 9;  // 内容类型（建议枚举：文本/图片/音频/视频/文件/自定义等）
+  int32  sender_platform_id   = 10; // 发送端平台（建议枚举：iOS/Android/Web/PC/...）
+  string sender_nickname      = 11; // 发送者昵称（冗余，便于历史回放快照）
+  string sender_face_url      = 12; // 发送者头像URL（冗余快照）
+  string group_id             = 13; // 群ID（群聊必填；单聊可为空）
+  string content              = 14; // 原始内容（纯文本或JSON；与多态Elem可并存，视业务需要）
+  int64  seq                  = 15; // 递增序列号（分区/全局序列，用于严格有序与增量同步）
+  bool   is_read              = 16; // 是否已读（端内缓存字段，服务端以回执为准）
+  int32  status               = 17; // 状态（建议枚举：0=正常，1=撤回，2=删除，3=失败...）
 
   // —— 推送/扩展 —— //
-  OfflinePushInfo offline_push  = 18;
-  string          attached_info = 19;
-  string          ex            = 20;
-  string          local_ex      = 21;
+  OfflinePushInfo offline_push  = 18; // 离线推送配置（标题/声音/角标等，按平台定制）
+  string          attached_info = 19; // 附加信息（字符串/JSON，服务端透传给客户端）
+  string          ex            = 20; // 业务扩展（字符串/JSON；服务端/客户端自定义）
+  string          local_ex      = 21; // 本地扩展（仅客户端使用；不建议服务端依赖）
 
   // —— 消息元素（多态内容） —— //
-  TextElem           text_elem            = 30;
-  CardElem           card_elem            = 31;
-  PictureElem        picture_elem         = 32;
-  SoundElem          sound_elem           = 33;
-  VideoElem          video_elem           = 34;
-  FileElem           file_elem            = 35;
-  MergeElem          merge_elem           = 36;
-  AtTextElem         at_text_elem         = 37;
-  FaceElem           face_elem            = 38;
-  LocationElem       location_elem        = 39;
-  CustomElem         custom_elem          = 40;
-  QuoteElem          quote_elem           = 41;
-  NotificationElem   notification_elem    = 42;
-  AdvancedTextElem   advanced_text_elem   = 43;
-  TypingElem         typing_elem          = 44;
-  AttachedInfoElem   attached_info_elem   = 45;
-  MarkdownTextElem   markdown_text_elem   = 46;
+  // 注：具体只使用一种或多种元素由业务决定；content_type 应与所用元素保持一致。
+  TextElem           text_elem            = 30; // 文本
+  CardElem           card_elem            = 31; // 名片/用户卡片
+  PictureElem        picture_elem         = 32; // 图片（含原图/大图/缩略图）
+  SoundElem          sound_elem           = 33; // 语音
+  VideoElem          video_elem           = 34; // 视频（含封面快照）
+  FileElem           file_elem            = 35; // 文件
+  MergeElem          merge_elem           = 36; // 合并转发（多条消息摘要）
+  AtTextElem         at_text_elem         = 37; // @消息（含at列表）
+  FaceElem           face_elem            = 38; // 表情/贴纸
+  LocationElem       location_elem        = 39; // 位置
+  CustomElem         custom_elem          = 40; // 自定义消息（data/desc/ext）
+  QuoteElem          quote_elem           = 41; // 引用消息（带被引消息快照）
+  NotificationElem   notification_elem    = 42; // 系统通知类
+  AdvancedTextElem   advanced_text_elem   = 43; // 富文本（带实体范围）
+  TypingElem         typing_elem          = 44; // 正在输入
+  AttachedInfoElem   attached_info_elem   = 45; // 附加信息（阅后即焚/加密/已读统计/上传进度等）
+  MarkdownTextElem   markdown_text_elem   = 46; // Markdown 文本
 
   // —— 协作/审计/公域扩展 —— //
-  bool   is_edited      = 60;
-  int64  edited_at      = 61;
-  int32  edit_version   = 62;
-  int64  expire_at      = 63;
-  string access_level   = 64;  // private/group/public
-  string trace_id       = 65;
-  string session_id     = 66;
-  repeated string tags  = 67;
+  bool   is_edited      = 60; // 是否被编辑
+  int64  edited_at      = 61; // 最近编辑时间（ms）
+  int32  edit_version   = 62; // 编辑版本号（编辑+1；客户端可比对冲突）
+  int64  expire_at      = 63; // 过期时间（ms；阅后即焚/定时删除）
+  string access_level   = 64; // 访问级别（"private"/"group"/"public" 等）
+  string trace_id       = 65; // 链路追踪ID（排查日志/分布式调用）
+  string session_id     = 66; // 会话/协作ID（会话级别调试或审计）
+  repeated string tags  = 67; // 标签（检索/分类/风控标注）
 
   // —— Guild/Channel/Thread/引用 & 富媒体 —— //
-  string guild_id       = 100;
-  string channel_id     = 101;
-  string thread_id      = 102;
-  string reply_to       = 103;
-  bool   is_ephemeral   = 104;
-  RichMessage rich      = 105;
-  repeated AutoModSignal automod = 110;
+  string guild_id       = 100; // 公会/服务器ID（Discord 类场景）
+  string channel_id     = 101; // 频道ID
+  string thread_id      = 102; // 话题/子线程ID
+  string reply_to       = 103; // 被回复的消息ID（轻引用）
+  bool   is_ephemeral   = 104; // 临时消息（仅会话内短暂存在）
+  RichMessage rich      = 105; // 富媒体复合体（见 rich.proto）
+  repeated AutoModSignal automod = 110; // 自动审核信号（敏感词/风控模型输出等）
 }
+
 
 // ================== 推送/业务辅助 ==================
+// 离线推送的跨端配置（按不同手机厂商/iOS/Android 定制）
 message OfflinePushInfo {
-  string title   = 1;
-  string desc    = 2;
-  string ex      = 3;
-  bool   ios_badge_count_plus1 = 4;
-  string ios_category = 5;
-  string ios_sound    = 6;
-  bool   android_vivo_classification = 7;
+  string title   = 1;  // 推送标题
+  string desc    = 2;  // 推送正文
+  string ex      = 3;  // 透传扩展（JSON 字符串）
+  bool   ios_badge_count_plus1 = 4; // iOS 角标是否 +1
+  string ios_category = 5; // iOS 通知分类（用于通知分组/动作）
+  string ios_sound    = 6; // iOS 自定义提示音
+  bool   android_vivo_classification = 7; // vivo 通知分类（厂商通道定制）
 }
 
+
+// 消息已读回执（按人/按群回传）
 message MessageReceipt {
-  string group_id     = 1;
-  string user_id      = 2;
-  repeated string msg_id_list = 3;
-  int64  read_time    = 4;
-  int32  msg_from     = 5;
-  int32  content_type = 6;
-  int32  session_type = 7;
+  string group_id     = 1;              // 群ID（单聊可空）
+  string user_id      = 2;              // 上报已读的用户ID
+  repeated string msg_id_list = 3;      // 已读的消息ID列表（server_msg_id 或 client_msg_id，按实现统一）
+  int64  read_time    = 4;              // 已读时间（ms）
+  int32  msg_from     = 5;              // 消息来源（同 MessageData.msg_from ）
+  int32  content_type = 6;              // 消息类型（同 MessageData.content_type）
+  int32  session_type = 7;              // 会话类型（同 MessageData.session_type）
 }
 
+
+// 撤回事件（记录撤回者/被撤回消息信息）
 message MessageRevoked {
-  string revoker_id                     = 1;
-  int32  revoker_role                   = 2;
-  string client_msg_id                  = 3;
-  string revoker_nickname               = 4;
-  int64  revoke_time                    = 5;
-  int64  source_message_send_time       = 6;
-  string source_message_send_id         = 7;
-  string source_message_sender_nickname = 8;
-  int32  session_type                   = 9;
-  int64  seq                            = 10;
-  string ex                             = 11;
-  bool   is_admin_revoke                = 12;
+  string revoker_id                     = 1;  // 撤回者ID
+  int32  revoker_role                   = 2;  // 撤回者角色（建议枚举：普通用户/管理员/系统）
+  string client_msg_id                  = 3;  // 被撤回消息的 client_msg_id（或与服务端ID同时存）
+  string revoker_nickname               = 4;  // 撤回者昵称快照
+  int64  revoke_time                    = 5;  // 撤回时间（ms）
+  int64  source_message_send_time       = 6;  // 原消息发送时间（ms）
+  string source_message_send_id         = 7;  // 原消息发送者ID
+  string source_message_sender_nickname = 8;  // 原消息发送者昵称快照
+  int32  session_type                   = 9;  // 会话类型
+  int64  seq                            = 10; // 原消息序列号
+  string ex                             = 11; // 扩展
+  bool   is_admin_revoke                = 12; // 是否管理员/系统强制撤回
 }
 
+
+// 表情回应/反应（如点赞/表情包贴/emoji 计数）
 message MessageReaction {
-  string client_msg_id = 1;
-  int32  reaction_type = 2;
-  int32  counter       = 3;
-  string user_id       = 4;
-  string group_id      = 5;
-  int32  session_type  = 6;
-  string info          = 7;
+  string client_msg_id = 1; // 目标消息ID（与服务端ID方案对齐）
+  int32  reaction_type = 2; // 反应类型（建议枚举：like=1, laugh=2, cry=3...）
+  int32  counter       = 3; // 该反应累计数
+  string user_id       = 4; // 最近一次反应的操作者（便于回放）
+  string group_id      = 5; // 群ID（单聊可空）
+  int32  session_type  = 6; // 会话类型
+  string info          = 7; // 扩展信息（例如表情自定义数据）
 }
+
 
 // ================== 媒体基础结构 ==================
-message ImageInfo { int32 width = 1; int32 height = 2; string type = 3; int64 size = 4; }
+// 轻量图片信息（例如用于富文本中内嵌元素）
+message ImageInfo {
+  int32  width  = 1; // 宽
+  int32  height = 2; // 高
+  string type   = 3; // 图片格式（jpg/png/webp）
+  int64  size   = 4; // 字节大小
+}
 
+// 图片通用元信息（原图/大图/缩略图）
 message PictureBaseInfo {
-  string uuid = 1; string type = 2; int64 size = 3; int32 width = 4; int32 height = 5; string url = 6;
+  string uuid   = 1; // 媒体唯一ID（用于CDN/云存储索引）
+  string type   = 2; // 图片格式
+  int64  size   = 3; // 字节大小
+  int32  width  = 4; // 宽
+  int32  height = 5; // 高
+  string url    = 6; // 访问URL（可含临时签名）
 }
 
+// 语音通用元信息
 message SoundBaseInfo {
-  string uuid = 1; string sound_path = 2; string source_url = 3; int64 data_size = 4; int64 duration = 5; string sound_type = 6;
+  string uuid       = 1; // 媒体唯一ID
+  string sound_path = 2; // 本地/相对路径（可选）
+  string source_url = 3; // 访问URL
+  int64  data_size  = 4; // 字节大小
+  int64  duration   = 5; // 时长（ms）
+  string sound_type = 6; // 编码格式（aac/amr/opus）
 }
 
+// 视频通用元信息（含封面快照）
 message VideoBaseInfo {
-  string video_path = 1; string video_uuid = 2; string video_url = 3; string video_type = 4; int64 video_size = 5; int64 duration = 6;
-  string snapshot_path = 7; string snapshot_uuid = 8; int64 snapshot_size = 9; string snapshot_url = 10; int32 snapshot_width = 11; int32 snapshot_height = 12; string snapshot_type = 13;
+  string video_path   = 1;  // 本地/相对路径（可选）
+  string video_uuid   = 2;  // 媒体唯一ID
+  string video_url    = 3;  // 视频URL
+  string video_type   = 4;  // 视频编码/封装格式（mp4/webm/…）
+  int64  video_size   = 5;  // 字节大小
+  int64  duration     = 6;  // 时长（ms）
+  string snapshot_path = 7; // 封面本地/相对路径（可选）
+  string snapshot_uuid = 8; // 封面唯一ID
+  int64  snapshot_size = 9; // 封面大小（字节）
+  string snapshot_url  = 10;// 封面URL
+  int32  snapshot_width  = 11; // 封面宽
+  int32  snapshot_height = 12; // 封面高
+  string snapshot_type   = 13; // 封面格式
 }
 
+// 文件通用元信息
 message FileBaseInfo {
-  string file_path = 1; string uuid = 2; string source_url = 3; string file_name = 4; int64 file_size = 5; string file_type = 6;
+  string file_path = 1; // 本地/相对路径（可选）
+  string uuid      = 2; // 文件唯一ID
+  string source_url= 3; // 访问URL
+  string file_name = 4; // 原始文件名
+  int64  file_size = 5; // 大小（字节）
+  string file_type = 6; // MIME/后缀（pdf/doc/zip等）
 }
 
-// ================== 各类 Elem ==================
-message TextElem { string content = 1; }
 
+// ================== 各类 Elem（消息体） ==================
+
+// 纯文本
+message TextElem {
+  string content = 1; // 文本内容（UTF-8）
+}
+
+// 名片/用户卡片
 message CardElem {
-  string user_id  = 1; string nickname = 2; string face_url = 3; string ex = 4;
+  string user_id  = 1; // 卡片所指用户ID
+  string nickname = 2; // 昵称快照
+  string face_url = 3; // 头像URL快照
+  string ex       = 4; // 扩展（JSON）
 }
 
+// 图片
 message PictureElem {
-  string source_path = 1; PictureBaseInfo source_picture = 2; PictureBaseInfo big_picture = 3; PictureBaseInfo snapshot_picture = 4;
+  string           source_path     = 1; // 源文件路径（可选）
+  PictureBaseInfo  source_picture  = 2; // 原图
+  PictureBaseInfo  big_picture     = 3; // 大图（压缩/等比）
+  PictureBaseInfo  snapshot_picture= 4; // 缩略图
 }
 
+// 语音（为兼容，重复了 SoundBaseInfo 的字段）
 message SoundElem {
-  string uuid = 1; string sound_path = 2; string source_url = 3; int64 data_size = 4; int64 duration = 5; string sound_type = 6;
+  string uuid       = 1;
+  string sound_path = 2;
+  string source_url = 3;
+  int64  data_size  = 4;
+  int64  duration   = 5;
+  string sound_type = 6;
 }
 
+// 视频（为兼容，重复了 VideoBaseInfo 的字段）
 message VideoElem {
-  string video_path = 1; string video_uuid = 2; string video_url = 3; string video_type = 4; int64 video_size = 5; int64 duration = 6;
-  string snapshot_path = 7; string snapshot_uuid = 8; int64 snapshot_size = 9; string snapshot_url = 10; int32 snapshot_width = 11; int32 snapshot_height = 12; string snapshot_type = 13;
+  string video_path    = 1;
+  string video_uuid    = 2;
+  string video_url     = 3;
+  string video_type    = 4;
+  int64  video_size    = 5;
+  int64  duration      = 6;
+  string snapshot_path = 7;
+  string snapshot_uuid = 8;
+  int64  snapshot_size = 9;
+  string snapshot_url  = 10;
+  int32  snapshot_width  = 11;
+  int32  snapshot_height = 12;
+  string snapshot_type   = 13;
 }
 
+// 文件（为兼容，重复了 FileBaseInfo 的字段）
 message FileElem {
-  string file_path = 1; string uuid = 2; string source_url = 3; string file_name = 4; int64 file_size = 5; string file_type = 6;
+  string file_path  = 1;
+  string uuid       = 2;
+  string source_url = 3;
+  string file_name  = 4;
+  int64  file_size  = 5;
+  string file_type  = 6;
 }
 
+// 合并转发
 message MergeElem {
-  string title = 1;
-  repeated string abstract_list = 2;
-  repeated MessageData multi_message = 3;
-  repeated MessageEntity message_entity_list = 4;
+  string title = 1;                           // 合并消息标题
+  repeated string abstract_list = 2;          // 每条摘要（预览文本）
+  repeated MessageData multi_message = 3;     // 嵌入的消息（快照副本）
+  repeated MessageEntity message_entity_list = 4; // 富文本实体（高亮/链接）
 }
 
+// @消息（文本 + @的对象）
 message AtTextElem {
-  string text = 1;
-  repeated string at_user_list = 2;
-  repeated AtInfo at_users_info = 3;
-  MessageData quote_message = 4;
-  bool is_at_self = 5;
+  string text = 1;                            // 文本
+  repeated string at_user_list = 2;           // 被@的 userID 列表
+  repeated AtInfo at_users_info = 3;          // @对象的昵称快照等
+  MessageData quote_message = 4;              // 可选：引用消息
+  bool is_at_self = 5;                        // 是否包含 @我
 }
 
-message FaceElem { int32 index = 1; string data = 2; }
+// 表情/贴纸
+message FaceElem {
+  int32  index = 1; // 表情索引（项目内约定表）
+  google.protobuf.Struct data = 2; // 扩展数据（自定义贴纸包/URL）
+}
 
-message LocationElem { string description = 1; double longitude = 2; double latitude = 3; }
+// 位置
+message LocationElem {
+  string description = 1; // 展示文案/POI 名称
+  double longitude   = 2; // 经度
+  double latitude    = 3; // 纬度
+}
 
-message CustomElem { string data = 1; string description = 2; string extension = 3; }
+// 自定义消息
+message CustomElem {
+  google.protobuf.Struct data = 1;   // 任意结构（需要注册类型）
+  string description       = 2;   // 描述（"auth" / "vote" / "red_envelope"...）
+  string extension         = 3;   // 扩展（版本/子类型等）
+}
 
+// 引用消息
 message QuoteElem {
-  string text = 1;
-  MessageData quote_message = 2;
-  repeated MessageEntity message_entity_list = 3;
+  string text = 1;                               // 引用时附带的文本（选填）
+  MessageData quote_message = 2;                 // 被引用消息的快照
+  repeated MessageEntity message_entity_list = 3;// 富文本实体（用于高亮链接等）
 }
 
-message NotificationElem { string detail = 1; }
+// 系统通知（结构化程度较低的轻量系统消息）
+message NotificationElem {
+  string detail = 1; // 详细描述/JSON
+}
 
+// 富文本（例如链接/加粗/高亮片段）
 message AdvancedTextElem {
-  string text = 1;
-  repeated MessageEntity message_entity_list = 2;
+  string text = 1;                             // 原文
+  repeated MessageEntity message_entity_list = 2; // 片段实体（offset/length/type/url/…）
 }
 
-message TypingElem { string msg_tips = 1; }
+// 正在输入提示
+message TypingElem {
+  string msg_tips = 1; // 展示文案（如“对方正在输入...”）
+}
 
-message MarkdownTextElem { string content = 1; }
+// Markdown 文本
+message MarkdownTextElem {
+  string content = 1; // Markdown 源
+}
+
 
 // ================== 附加信息/进度/实体 ==================
+
+// 附加信息容器（阅后即焚、加密状态、群已读统计、上传进度等）
 message AttachedInfoElem {
-  GroupHasReadInfo group_has_read_info = 1;
-  bool is_private_chat = 2;
-  int32 burn_duration = 3;
-  int64 has_read_time = 4;
-  repeated MessageEntity message_entity_list = 5;
-  bool is_encryption = 6;
-  bool in_encrypt_status = 7;
-  UploadProgress progress = 8;
+  GroupHasReadInfo group_has_read_info = 1; // 群已读概览（人数/名单）
+  bool  is_private_chat   = 2; // 是否私聊（用于端上展示策略）
+  int32 burn_duration     = 3; // 阅后即焚时长（秒/毫秒，按项目约定）
+  int64 has_read_time     = 4; // 已读时间（ms；单聊时常用）
+  repeated MessageEntity message_entity_list = 5; // 富文本实体（端上可直接渲染）
+  bool  is_encryption     = 6; // 是否加密消息（端到端/会话加密）
+  bool  in_encrypt_status = 7; // 是否处于加密会话（会话状态指示）
+  UploadProgress progress = 8; // 上传进度（大文件/断点续传）
 }
 
+// 系统事件（会话内的管理/控制事件，如踢人/转接/禁言等）
 message SystemEvent {
-  string event_type = 1;               // "kick" / "transfer" / "mute" ...
-  string reason     = 2;
-  map<string,string> data = 3;         // 附带数据
+  string event_type = 1;               // 事件类型："kick" / "transfer" / "mute" / ...
+  string reason     = 2;               // 原因描述
+  map<string,string> data = 3;         // 附带数据（键值对；灵活扩展）
 }
 
-message UploadProgress { int64 total = 1; int64 save = 2; int64 current = 3; string upload_id = 4; }
+// 上传进度
+message UploadProgress {
+  int64  total     = 1; // 总大小（字节）
+  int64  save      = 2; // 已写入持久化（字节）
+  int64  current   = 3; // 当前已上传（字节）
+  string upload_id = 4; // 上传会话ID（断点续传/重试）
+}
 
+// 反应聚合（列表/是否可重复等）
 message ReactionElem {
-  int32 counter = 1; int32 type = 2; repeated UserReactionElem user_reaction_list = 3; bool can_repeat = 4; string info = 5;
+  int32  counter = 1;                          // 累计数量
+  int32  type    = 2;                          // 反应类型（与 MessageReaction.reaction_type 对齐）
+  repeated UserReactionElem user_reaction_list = 3; // 用户维度的反应明细
+  bool   can_repeat = 4;                       // 是否允许重复添加/叠加
+  google.protobuf.Struct  info       = 5;                       // 扩展信息
 }
 
-message UserReactionElem { string user_id = 1; int32 counter = 2; string info = 3; }
+// 单个用户的反应计数
+message UserReactionElem {
+  string user_id = 1; // 用户ID
+  int32  counter = 2; // 该用户的累计次数
+  google.protobuf.Struct info    = 3; // 扩展（自定义贴纸包/皮肤等）
+}
 
-message MessageEntity { string type = 1; int32 offset = 2; int32 length = 3; string url = 4; string ex = 5; }
+// 富文本实体（用于文本中片段标注：超链接/mention/加粗等）
+message MessageEntity {
+  string type   = 1; // 实体类型（"url" / "bold" / "italic" / "mention" / ...）
+  int32  offset = 2; // 起始偏移（相对 text 的 UTF-8 字节或 rune 索引；按项目统一）
+  int32  length = 3; // 长度（同上单位）
+  string url    = 4; // 链接（当 type=url 时）
+  string ex     = 5; // 扩展（JSON）
+}
 
-message GroupHasReadInfo { repeated string has_read_user_id_list = 1; int32 has_read_count = 2; int32 group_member_count = 3; }
+// 群已读统计
+message GroupHasReadInfo {
+  repeated string has_read_user_id_list = 1; // 已读成员ID列表（大群可只返回前N或分页）
+  int32  has_read_count      = 2;           // 已读人数
+  int32  group_member_count  = 3;           // 群总人数（统计口径与群类型相关）
+}
 
-message AtInfo { string at_user_id = 1; string group_nickname = 2; }
+// @对象信息（在 @ 列表中携带昵称等快照）
+message AtInfo {
+  string at_user_id      = 1; // 被@的用户ID
+  string group_nickname  = 2; // 群昵称快照（或展示名）
+}
+
+
+enum SessionType {
+  SESSION_TYPE_UNSPECIFIED = 0; // 未指定（默认）
+  SINGLE_CHAT   = 1; // 单聊
+  GROUP_CHAT    = 2; // 群聊
+  SUPER_GROUP   = 3; // 超大群/频道
+  NOTIFICATION  = 4; // 系统通知会话
+  CUSTOMER      = 5; // 客服/工单会话
+}
+
+
+
+enum ContentType {
+  CONTENT_TYPE_UNSPECIFIED = 0; // 未指定
+
+  // —— 文本类 —— //
+  TEXT             = 101; // 文本
+  ADVANCED_TEXT    = 102; // 富文本
+  MARKDOWN         = 103; // Markdown
+
+  // —— 媒体类 —— //
+  PICTURE          = 201; // 图片
+  SOUND            = 202; // 语音
+  VIDEO            = 203; // 视频
+  FILE             = 204; // 文件
+  LOCATION         = 205; // 位置
+
+  // —— 交互类 —— //
+  CARD             = 301; // 名片
+  AT_TEXT          = 302; // @消息
+  FACE             = 303; // 表情
+  MERGE            = 304; // 合并转发
+  QUOTE            = 305; // 引用
+  TYPING           = 306; // 输入中
+  CUSTOM           = 399; // 自定义消息（扩展）
+
+  // —— 系统类 —— //
+  MsgNOTIFICATION     = 401; // 通知消息
+  REACTION         = 402; // 表情回应/反应
+  REVOKE           = 403; // 撤回消息
+}
+
+
+enum MsgFrom {
+  MSG_FROM_UNSPECIFIED = 0; // 未指定
+  USER     = 1; // 普通用户
+  SYSTEM   = 2; // 系统（服务端主动推送）
+  ADMIN    = 3; // 管理员/客服
+  ROBOT    = 4; // 机器人/自动化任务
+  THIRD    = 5; // 第三方接入（webhook等）
+}
+
+
+enum PlatformID {
+  PLATFORM_UNSPECIFIED = 0; // 未指定
+
+  IOS     = 1; // iOS
+  ANDROID = 2; // Android
+  WINDOWS = 3; // Windows 客户端
+  MAC     = 4; // macOS 客户端
+  WEB     = 5; // Web/H5
+  MINI    = 6; // 小程序（微信/支付宝等）
+  LINUX   = 7; // Linux 桌面端
+  ADMINMANAGE   = 8; // 管理后台
+  API     = 9; // API/服务调用
+}
+

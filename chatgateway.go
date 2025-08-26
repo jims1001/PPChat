@@ -3,6 +3,7 @@ package main
 import (
 	pb "PProject/gen/gateway"
 	global "PProject/global"
+	mid "PProject/middleware"
 	"PProject/module/user"
 	"PProject/service/chat"
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,9 @@ func main() {
 	global.ConfigIds()
 	global.ConfigRedis()
 	global.ConfigMgo()
+	global.ConfigMiddleware()
+
+	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
 
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
@@ -68,9 +72,14 @@ func main() {
 
 	// 6) Start HTTP + WebSocket
 	r := gin.New()
+	r.Use(gin.Recovery())
+
 	r.GET("/chat", g.HandleWS) // e.g. ws://localhost:8080/chat?user=A&to=B
-	r.POST("/login", user.HandlerLogin)
-	r.POST("/check", user.HandlerCheck)
+	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
+	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
+	//r.POST("/check", user.HandlerCheck)
+	//r.POST("/user")
+
 	log.Println("[HTTP] Listening on :8080")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)

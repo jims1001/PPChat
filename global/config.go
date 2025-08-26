@@ -2,6 +2,7 @@ package global
 
 import (
 	"PProject/data/database/mgo/mongoutil"
+	mid "PProject/middleware"
 	mgoSrv "PProject/service/mgo"
 	redis "PProject/service/storage/redis"
 	ids "PProject/tools/ids"
@@ -54,4 +55,8 @@ func ConfigMgo() {
 		}
 	}()
 
+}
+
+func ConfigMiddleware() {
+	mid.Config()
 }

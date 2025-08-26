@@ -3,8 +3,11 @@ package chat
 import (
 	pb "PProject/gen/message"
 	"context"
+	"fmt"
+	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/encoding/protojson"
 	"log"
 	"time"
 )
@@ -14,9 +17,29 @@ type Server struct {
 	routerAddr string
 	reg        *registry
 	// below fields are used by ws_server for writing back to clients
-	incoming chan *pb.MessageFrame // frames from router destined to local users
+	incoming   chan *pb.MessageFrame // frames from router destined to local users
+	connection chan *pb.MessageFrame // 只处理 连接的消息
 
 	connMgr *ConnManager // connection manager
+}
+
+func SendFrameJSON(conn *websocket.Conn, frame *pb.MessageFrameData) error {
+	if conn == nil {
+		return fmt.Errorf("nil websocket conn")
+	}
+
+	// 转 JSON
+	data, err := protojson.MarshalOptions{
+		Indent:          "",   // 压缩格式
+		UseEnumNumbers:  true, // 枚举输出数字（和你之前协议示例一致）
+		EmitUnpopulated: false,
+	}.Marshal(frame)
+	if err != nil {
+		return fmt.Errorf("marshal frame: %w", err)
+	}
+
+	// 发送
+	return conn.WriteMessage(websocket.TextMessage, data)
 }
 
 func NewServer(gwID, routerAddr string, conn *ConnManager) (*Server, error) {
@@ -31,6 +54,12 @@ func NewServer(gwID, routerAddr string, conn *ConnManager) (*Server, error) {
 
 func (s *Server) RunToRouter() {
 	retry := time.Second
+
+	// 处理连接的消息发送
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.LoopConnect(ctx)
+
 	for {
 		if err := s.loopRouter(); err != nil {
 			log.Printf("router stream closed: %v, retry in %v", err, retry)
@@ -40,6 +69,85 @@ func (s *Server) RunToRouter() {
 			}
 		}
 	}
+}
+
+// LoopConnect 处理连接信息
+// loopConnect 消费 outbound 帧并发送到对应连接。
+// 建议由上层传入 ctx（服务关闭时能优雅退出）。
+func (s *Server) LoopConnect(ctx context.Context) {
+	// 如果你有 WaitGroup：
+	// s.wg.Add(1)
+	go func() {
+		// defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[loopConnect] panic recovered: %v", r)
+			}
+		}()
+
+		outCh := s.connBound() // <-chan *pb.MessageFrameData
+
+		marshaller := protojson.MarshalOptions{
+			Indent:          "",
+			UseEnumNumbers:  true,
+			EmitUnpopulated: false,
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[loopConnect] ctx done: %v", ctx.Err())
+				return
+
+			case msg, ok := <-outCh:
+				if !ok {
+					log.Printf("[loopConnect] outbound channel closed")
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				connID := msg.GetConnId()
+				if connID == "" {
+					log.Printf("[loopConnect] missing conn_id, trace_id=%s type=%v", msg.GetTraceId(), msg.GetType())
+					continue
+				}
+
+				ws, err := s.connMgr.GetUnAuthClient(msg.ConnId) // (*websocket.Conn, bool)
+				if err != nil {
+					log.Printf("[loopConnect] connMgr.GetUnAuthClient error: %v", err)
+					continue
+				}
+
+				// 序列化（一次性）
+				data, err := marshaller.Marshal(msg)
+				if err != nil {
+					log.Printf("[loopConnect] marshal frame failed: conn_id=%s err=%v", connID, err)
+					continue
+				}
+
+				// 发送（带写超时）
+				if err := writeJSONWithDeadline(ws.Conn, data, 5*time.Second); err != nil {
+					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					// 发送失败：关闭并从管理器移除，防止死连接占用资源
+					_ = ws.Conn.Close()
+					s.connMgr.Remove(connID)
+					continue
+				}
+			}
+		}
+	}()
+}
+
+// 封装一个带写超时的发送，避免并发写/阻塞。
+// 注意：gorilla/websocket 的 WriteMessage 不能并发调用，
+// 如果上层可能多处写，请为每个连接做“单写协程 + 缓冲队列”的写泵模型。
+func writeJSONWithDeadline(ws *websocket.Conn, jsonBytes []byte, d time.Duration) error {
+	if ws == nil {
+		return fmt.Errorf("nil websocket")
+	}
+	_ = ws.SetWriteDeadline(time.Now().Add(d))
+	return ws.WriteMessage(websocket.TextMessage, jsonBytes)
 }
 
 func (s *Server) loopRouter() error {
@@ -92,5 +200,12 @@ func (s *Server) loopRouter() error {
 // outbound returns a read-only channel that ws_server pushes into
 func (s *Server) outbound() <-chan *pb.MessageFrame { return wsOutbound }
 
+func (s *Server) connBound() <-chan *pb.MessageFrameData {
+	return wsConnection
+}
+
 // package-scope channel shared with ws_server.go for simplicity
 var wsOutbound = make(chan *pb.MessageFrame, 8192)
+
+// 只需要处理连接
+var wsConnection = make(chan *pb.MessageFrameData, 8192)

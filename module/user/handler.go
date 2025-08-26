@@ -46,9 +46,6 @@ func HandlerCheck(c *gin.Context) {
 		return
 	}
 
-	//global.DebugBody(c)
-	//
-
 	ctx := context.Background()
 	defer ctx.Done()
 
@@ -59,4 +56,11 @@ func HandlerCheck(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, global.Sucess(session))
+}
+
+func handleUserInfo(c *gin.Context) {
+	ctx := context.Background()
+	defer ctx.Done()
+
+	c.JSON(http.StatusOK, global.Sucess(""))
 }

@@ -26,7 +26,9 @@ message MessageFrameData {
     MESSAGE_UPDATE   = 6;  // 编辑/版本更新
     MESSAGE_ACTION   = 7;  // 协作动作（表单/投票等）
     SYSTEM_EVENT     = 8;  // 系统事件（转接/强制下线等）
-  }
+    AUTH             = 9;  // 授权
+    CONN             = 10; // 连接类型
+   }
 
   // 传输服务质量
   enum QoS {
