@@ -17,10 +17,17 @@ type Server struct {
 	routerAddr string
 	reg        *registry
 	// below fields are used by ws_server for writing back to clients
-	incoming   chan *pb.MessageFrame // frames from router destined to local users
-	connection chan *pb.MessageFrame // 只处理 连接的消息
+	incoming    chan *pb.MessageFrame // frames from router destined to local users
+	connection  chan *pb.MessageFrame // 只处理 连接的消息
+	authPayload chan *pb.MessageFrameData
 
 	connMgr *ConnManager // connection manager
+}
+
+type WSConnectionMsg struct {
+	Frame *pb.MessageFrameData
+	Conn  *WsConn
+	Req   *pb.MessageFrameData
 }
 
 func SendFrameJSON(conn *websocket.Conn, frame *pb.MessageFrameData) error {
@@ -59,6 +66,7 @@ func (s *Server) RunToRouter() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	s.LoopConnect(ctx)
+	s.LoopAuth(ctx)
 
 	for {
 		if err := s.loopRouter(); err != nil {
@@ -139,6 +147,71 @@ func (s *Server) LoopConnect(ctx context.Context) {
 	}()
 }
 
+func (s *Server) LoopAuth(ctx context.Context) {
+
+	go func() {
+		// defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[loopConnect] panic recovered: %v", r)
+			}
+		}()
+
+		outCh := s.authBound() // <-chan *pb.MessageFrameData
+
+		marshaller := protojson.MarshalOptions{
+			Indent:          "  ", // 美化输出
+			UseEnumNumbers:  true, // 枚举用数字
+			EmitUnpopulated: true, // 建议调成 true，客户端好解析
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[loopConnect] ctx done: %v", ctx.Err())
+				return
+
+			case msg, ok := <-outCh:
+				if !ok {
+					log.Printf("[loopConnect] outbound channel closed")
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				connID := msg.Frame.GetConnId()
+				if connID == "" {
+					log.Printf("[loopConnect] missing conn_id, trace_id=%s type=%v", msg.Frame.GetTraceId(), msg.Frame.GetType())
+					continue
+				}
+
+				ws, res := s.connMgr.Get(msg.Conn.UserId)
+				if !res {
+					log.Printf("[loopConnect] connMgr.GetUnAuthClient error: %v", res)
+					continue
+				}
+
+				// 序列化（一次性）
+				data, err := marshaller.Marshal(msg.Frame)
+				if err != nil {
+					log.Printf("[loopConnect] marshal frame failed: conn_id=%s err=%v", connID, err)
+					continue
+				}
+				log.Printf("[loopConnect] send frame to data%s", string(data))
+
+				// 发送（带写超时）
+				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
+					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					// 发送失败：关闭并从管理器移除，防止死连接占用资源
+					_ = ws.Close()
+					s.connMgr.Remove(connID)
+					continue
+				}
+			}
+		}
+	}()
+}
+
 // 封装一个带写超时的发送，避免并发写/阻塞。
 // 注意：gorilla/websocket 的 WriteMessage 不能并发调用，
 // 如果上层可能多处写，请为每个连接做“单写协程 + 缓冲队列”的写泵模型。
@@ -204,8 +277,15 @@ func (s *Server) connBound() <-chan *pb.MessageFrameData {
 	return wsConnection
 }
 
+// 处理授权的消息
+func (s *Server) authBound() <-chan *WSConnectionMsg {
+	return wsAuthChannel
+}
+
 // package-scope channel shared with ws_server.go for simplicity
 var wsOutbound = make(chan *pb.MessageFrame, 8192)
 
 // 只需要处理连接
 var wsConnection = make(chan *pb.MessageFrameData, 8192)
+
+var wsAuthChannel = make(chan *WSConnectionMsg, 8192)

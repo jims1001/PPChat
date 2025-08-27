@@ -314,9 +314,9 @@ func (m *OnlineStore) OfflineUnauth(ctx context.Context, snowID string, publish 
 }
 
 // Authorize：把“未授权连接”原子绑定成“已授权会话”
-func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (bool, error) {
+func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (bool, *errors.CodeError) {
 	if m.conf.UnauthTTL <= 0 {
-		return false, errors.New("unauth stage disabled")
+		return false, &errors.CodeError{Msg: "unauth stage disabled", Code: 100}
 	}
 	kUnauth := m.unauthSessionKey(snowID)
 	kAuth := m.sessionKey(userID, snowID)
@@ -332,7 +332,7 @@ func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (boo
 		int64(m.conf.TTL/time.Second), now.Unix(), expAt, boolToInt(m.conf.UseEXAT),
 	).Int64()
 	if err != nil {
-		return false, err
+		return false, &errors.CodeError{Msg: err.Error(), Code: 101}
 	}
 	switch rc {
 	case 1:
@@ -340,9 +340,9 @@ func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (boo
 	case 0:
 		return false, nil
 	case -1:
-		return false, errors.New("authorized key already exists")
+		return false, &errors.ErrorRecordIsExist
 	default:
-		return false, fmt.Errorf("unexpected bind rc=%d", rc)
+		return false, &errors.CodeError{Msg: fmt.Sprintf("unexpected bind rc=%d", rc), Code: 102}
 	}
 }
 

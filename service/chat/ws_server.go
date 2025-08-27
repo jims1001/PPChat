@@ -259,6 +259,84 @@ func BuildConnectionAck(connID, gatewayID, sessionID, nodeID string) *pb.Message
 	}
 }
 
+func BuildAuthAck(req *pb.MessageFrameData) *pb.MessageFrameData {
+	now := time.Now().UnixMilli()
+
+	// 构造 custom_elem.data 的 JSON
+	data := map[string]any{
+		"ok":              true,
+		"user_id":         "user_10001",
+		"session_id":      "748508987506704384",
+		"conn_id":         "c-77f0d2",
+		"device_id":       "aabbccddeeff00112233",
+		"granted_scopes":  []any{"read", "write", "profile"},
+		"token_expire_at": now + 3600*1000, // 1小时后过期
+		"server_time":     now,
+		"heartbeat": map[string]any{
+			"ping_interval_ms": 25000,
+			"pong_timeout_ms":  75000,
+		},
+		"policy": map[string]any{
+			"max_sessions":         5,
+			"kick_unauth_after_ms": 30000,
+		},
+	}
+
+	st, err := structpb.NewStruct(data)
+	if err != nil {
+		log.Printf("BuildAuthAck stdata is error: %v ", err)
+	}
+	return &pb.MessageFrameData{
+		Type:        pb.MessageFrameData_AUTH,
+		From:        "gateway_auth",
+		To:          "user_10001",
+		Ts:          now,
+		GatewayId:   "gw-1a",
+		ConnId:      "c-77f0d2",
+		TenantId:    "tenant_001",
+		AppId:       "im_app",
+		Qos:         pb.MessageFrameData_QOS_AT_LEAST_ONCE,
+		Priority:    pb.MessageFrameData_PRIORITY_DEFAULT,
+		AckRequired: false,
+		AckId:       req.GetAckId(), // 回显客户端的 ack_id
+		DedupId:     fmt.Sprintf("authack-%d", now),
+		Nonce:       "srv-nonce-123",
+		ExpiresAt:   now + 3600*1000,
+		SessionId:   "748508987506704384",
+		DeviceId:    "aabbccddeeff00112233",
+		Platform:    "Web",
+		AppVersion:  "1.0.3",
+		Locale:      "zh-CN",
+		Meta: map[string]string{
+			"ip": "203.0.113.10",
+			"ua": "Chrome/139",
+		},
+
+		Body: &pb.MessageFrameData_Payload{
+			Payload: &pb.MessageData{
+				ClientMsgId:      "cmid-0001",
+				ServerMsgId:      "smid-authack-0001",
+				CreateTime:       now,
+				SendTime:         now,
+				SessionType:      4, // NOTIFICATION
+				SendId:           "gateway_auth",
+				RecvId:           "user_10001",
+				MsgFrom:          2,     // SYSTEM
+				ContentType:      31001, // AUTH_ACK (自定义)
+				SenderPlatformId: 99,
+				SenderNickname:   "System", // 把用户信息 JSON 放这里
+				IsRead:           false,
+				Status:           0,
+				CustomElem: &pb.CustomElem{
+					Description: "session_ack",
+					Extension:   "v1",
+					Data:        st,
+				},
+			},
+		},
+	}
+}
+
 // -------- 4) 小工具 --------
 
 func boolToStr(b bool) string {
@@ -294,7 +372,7 @@ func fmtInt(i int) string {
 	return string(buf[pos:])
 }
 
-// ===== WebSocket 处理（修正版） =====
+// HandleWS ===== WebSocket 处理（修正版） =====
 func (s *Server) HandleWS(c *gin.Context) {
 	user := c.Query("user")
 	if user == "" {
@@ -363,7 +441,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 	// --- 写协程：唯一写者（业务 + ping + 优雅关闭） ---
 	done := make(chan struct{})
-	go func(rec *wsConn) {
+	go func(rec *WsConn) {
 		ticker := time.NewTicker(pingInterval)
 		first := time.NewTimer(firstPingDelay)
 		defer func() {
@@ -471,38 +549,49 @@ func (s *Server) HandleWS(c *gin.Context) {
 			continue
 		}
 
-		// 提取授权负载（按你的协议）
-		payload := msg.GetPayload()
-		payData, aerr := ExtractAuthPayload(payload)
-		if aerr != nil {
-			log.Printf("[WS] ExtractAuthPayload err snowID=%s err=%v", rec.SnowID, aerr)
-			continue
-		}
-		if msg.ConnId == "" {
-			log.Printf("[WS] Authorize skip (empty ConnId) user=%s snowID=%s", payData.UserID, rec.SnowID)
-			continue
-		}
+		if msg.Type == pb.MessageFrameData_AUTH {
+			// 提取授权负载（按你的协议）
+			payload := msg.GetPayload()
+			payData, aerr := ExtractAuthPayload(payload)
+			if aerr != nil {
+				log.Printf("[WS] ExtractAuthPayload err snowID=%s err=%v", rec.SnowID, aerr)
+				continue
+			}
+			if msg.ConnId == "" {
+				log.Printf("[WS] Authorize skip (empty ConnId) user=%s snowID=%s", payData.UserID, rec.SnowID)
+				continue
+			}
 
-		// 授权：注意第三个参数使用 ConnId（不是 SessionId）
-		ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
-		_, authErr := online.GetManager().Authorize(ctx, payData.UserID, msg.SessionId)
-		cancel()
-		if authErr != nil {
-			log.Printf("[WS] Authorize err user=%s conn=%s snowID=%s err=%v",
-				payData.UserID, msg.ConnId, rec.SnowID, authErr)
-			continue
+			// 授权：注意第三个参数使用 ConnId（不是 SessionId）
+			ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
+			_, authErr := online.GetManager().Authorize(ctx, payData.UserID, msg.SessionId)
+			cancel()
+			if authErr != nil {
+				if !authErr.Is(&errors.ErrorRecordIsExist) {
+					log.Printf("[WS] Authorize err user=%s conn=%s snowID=%s err=%v",
+						payData.UserID, msg.ConnId, rec.SnowID, authErr)
+					continue
+				}
+			}
+			// 绑定用户 → 续期在线 → 放宽读超时
+			rec.UserId = payData.UserID
+			err := s.connMgr.BindUser(rec.SnowID, rec.UserId)
+			if err != nil {
+				continue
+			}
+
+			authAckMsg := BuildAuthAck(msg)
+
+			wsAuthChannel <- &WSConnectionMsg{
+				Frame: authAckMsg,
+				Conn:  rec,
+				Req:   msg,
+			}
+
+			_ = ws.SetReadDeadline(time.Now().Add(readIdleAfterAuth))
+
+			log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		}
-
-		// 绑定用户 → 续期在线 → 放宽读超时
-		rec.UserId = payData.UserID
-		err := s.connMgr.BindUser(rec.SnowID, rec.UserId)
-		if err != nil {
-			continue
-		}
-
-		_ = ws.SetReadDeadline(time.Now().Add(readIdleAfterAuth))
-
-		log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 
 		// 如果该业务帧本身是上行消息（例如客户端发文本），按需路由给自己或别人：
 		// 这里示例：回显给自己（真实场景请在你的路由层把消息投递到目标连接的 SendChan）

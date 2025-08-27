@@ -38,7 +38,7 @@ func (c *ManagerConf) norm() {
 
 // ===== 数据结构 =====
 
-type wsConn struct {
+type WsConn struct {
 	SnowID     string
 	UserId     string
 	Authorized bool
@@ -58,8 +58,8 @@ type wsConn struct {
 type ConnManager struct {
 	mu     sync.RWMutex
 	conns  map[string]*websocket.Conn    // 兼容旧版：userID -> 任意一条连接
-	bySnow map[string]*wsConn            // 主索引：snowID -> wsConn
-	byUser map[string]map[string]*wsConn // 辅助索引：userID -> (snowID -> wsConn)
+	bySnow map[string]*WsConn            // 主索引：snowID -> wsConn
+	byUser map[string]map[string]*WsConn // 辅助索引：userID -> (snowID -> wsConn)
 
 	conf     ManagerConf
 	stopOnce sync.Once
@@ -77,8 +77,8 @@ func NewConnManagerWithConf(conf ManagerConf) *ConnManager {
 	conf.norm()
 	m := &ConnManager{
 		conns:  make(map[string]*websocket.Conn),
-		bySnow: make(map[string]*wsConn),
-		byUser: make(map[string]map[string]*wsConn),
+		bySnow: make(map[string]*WsConn),
+		byUser: make(map[string]map[string]*WsConn),
 		conf:   conf,
 		stopCh: make(chan struct{}),
 	}
@@ -95,8 +95,8 @@ func (m *ConnManager) Close() {
 		closeQuiet(x.Conn)
 	}
 	m.conns = map[string]*websocket.Conn{}
-	m.bySnow = map[string]*wsConn{}
-	m.byUser = map[string]map[string]*wsConn{}
+	m.bySnow = map[string]*WsConn{}
+	m.byUser = map[string]map[string]*WsConn{}
 }
 
 // ===== 兼容旧 API（Add/Get/Remove/Send）=====
@@ -123,7 +123,7 @@ func (m *ConnManager) Add(user string, sid string, conn *websocket.Conn) {
 		delete(m.byUser, user)
 	}
 
-	w := &wsConn{
+	w := &WsConn{
 		SnowID:     sid,
 		UserId:     user,
 		Authorized: true,
@@ -136,7 +136,7 @@ func (m *ConnManager) Add(user string, sid string, conn *websocket.Conn) {
 		Heartbeat:  now,
 	}
 	m.bySnow[sid] = w
-	m.byUser[user] = map[string]*wsConn{sid: w}
+	m.byUser[user] = map[string]*WsConn{sid: w}
 }
 
 // Get Get: 旧接口——返回该用户的一条连接（若有多条，返回任意一条）
@@ -203,7 +203,7 @@ func (m *ConnManager) Send(user string, data []byte) error {
 // ===== 新能力：snowID / 未授权→授权 / 心跳 / TTL / 清理 / 最大连接数 / 挤下线 =====
 
 // AddUnauth : 新连接（未授权）登记；仅有 snowID
-func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*wsConn, error) {
+func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*WsConn, error) {
 	if snowID == "" || conn == nil {
 		return nil, errors.New("snowID/conn empty")
 	}
@@ -215,7 +215,7 @@ func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*wsConn, e
 		return nil, errors.New("snowID exists")
 	}
 
-	wsConnection := &wsConn{
+	wsConnection := &WsConn{
 		SnowID:     snowID,
 		UserId:     "",
 		Authorized: false,
@@ -233,7 +233,7 @@ func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*wsConn, e
 }
 
 // GetUnAuthClient 获取没有授权的客户端
-func (m *ConnManager) GetUnAuthClient(snowID string) (*wsConn, error) {
+func (m *ConnManager) GetUnAuthClient(snowID string) (*WsConn, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -275,7 +275,7 @@ func (m *ConnManager) BindUser(snowID, user string) error {
 
 	// 挂到 user
 	if m.byUser[user] == nil {
-		m.byUser[user] = make(map[string]*wsConn)
+		m.byUser[user] = make(map[string]*WsConn)
 	}
 	m.byUser[user][w.SnowID] = w
 
@@ -312,7 +312,7 @@ func (m *ConnManager) AddAuthorized(user, snowID string, conn *websocket.Conn) e
 		m.ensureRoomForUserLocked(user)
 	}
 
-	w := &wsConn{
+	w := &WsConn{
 		SnowID:     snowID,
 		UserId:     user,
 		Authorized: true,
@@ -326,7 +326,7 @@ func (m *ConnManager) AddAuthorized(user, snowID string, conn *websocket.Conn) e
 	}
 	m.bySnow[snowID] = w
 	if m.byUser[user] == nil {
-		m.byUser[user] = make(map[string]*wsConn)
+		m.byUser[user] = make(map[string]*WsConn)
 	}
 	m.byUser[user][snowID] = w
 
@@ -489,7 +489,7 @@ func (m *ConnManager) sweeper() {
 }
 
 func (m *ConnManager) sweepOnce(now time.Time) {
-	var expired []*wsConn
+	var expired []*WsConn
 
 	m.mu.Lock()
 	for sid, w := range m.bySnow {
@@ -547,7 +547,7 @@ func (m *ConnManager) ensureRoomForUserLocked(user string) {
 	}
 
 	// 选择最老的一条淘汰（CreatedAt 更早）
-	var oldest *wsConn
+	var oldest *WsConn
 	for _, w := range mm {
 		if oldest == nil || w.CreatedAt.Before(oldest.CreatedAt) {
 			oldest = w

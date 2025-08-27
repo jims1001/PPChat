@@ -2,7 +2,6 @@ package errs
 
 import (
 	"PProject/tools/errs/stack"
-	"errors"
 	"strconv"
 	"strings"
 )
@@ -71,19 +70,9 @@ func (e *CodeError) WrapMsg(msg string, kv ...any) error {
 	return stack.New(retErr, stackSkip)
 }
 
-func (e *CodeError) Is(err error) bool {
-	var codeErr CodeError
-	ok := errors.As(Unwrap(err), &codeErr)
-	if !ok {
-		if err == nil && e == nil {
-			return true
-		}
-		return false
-	}
-	if e == nil {
-		return false
-	}
-	code := codeErr.Code
+func (e *CodeError) Is(err *CodeError) bool {
+
+	code := err.Code
 	if e.Code == code {
 		return true
 	}
