@@ -2,18 +2,17 @@ package chat
 
 import (
 	pb "PProject/gen/message"
-	"PProject/service/storage"
 	online "PProject/service/storage"
 	decode "PProject/tools/decode"
 	errors "PProject/tools/errs"
 	"context"
-	"google.golang.org/protobuf/types/known/structpb"
-	"log"
-
 	"fmt"
+	"github.com/emicklei/go-restful/v3/log"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
+	"net"
 	"net/http"
 	"time"
 )
@@ -295,22 +294,29 @@ func fmtInt(i int) string {
 	return string(buf[pos:])
 }
 
+// ===== WebSocket 处理（修正版） =====
 func (s *Server) HandleWS(c *gin.Context) {
 	user := c.Query("user")
 	if user == "" {
-		c.String(400, "missing user")
-		return
-	}
-	ws, err := upgraded.Upgrade(c.Writer, c.Request, nil) // Note the variable name "upgrader"
-	if err != nil {
+		c.String(http.StatusBadRequest, "missing user")
 		return
 	}
 
+	ws, err := upgraded.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		// 常见：非 WebSocket 请求/握手失败
+		return
+	}
+
+	// ---- 常量参数（建议值） ----
 	const (
-		presenceTTL  = 90 * time.Second
-		pongWait     = 75 * time.Second
-		pingInterval = 25 * time.Second // Must be less than pongWait/3
-		writeWait    = 5 * time.Second
+		presenceTTL       = 300 * time.Second
+		readPongWait      = 75 * time.Second
+		pingInterval      = 25 * time.Second
+		writeWait         = 10 * time.Second // 拉长以排查写超时
+		firstPingDelay    = 5 * time.Second  // 首个 ping 延后，避免刚连上即写超时
+		authTimeout       = 2 * time.Second  // 从 400ms 拉长，避免偶发超时
+		readIdleAfterAuth = 2 * time.Minute
 	)
 
 	conf := online.OnlineConfig{
@@ -323,126 +329,201 @@ func (s *Server) HandleWS(c *gin.Context) {
 		UseJSONValue:  true,
 		Secret:        "hmac-secret",
 		UseEXAT:       true,
-		UnauthTTL:     30 * time.Second,
+		UnauthTTL:     30 * time.Second, // 如遇“未授权清理过快”，可临时调大验证
 	}
 
-	// 处理在线状态
+	// Online 管理器（幂等）
 	_, _ = online.InitManager(conf)
+
+	// --- 注册“未授权连接” → 返回 sessionKey + snowID ---
 	sessionKey, snowID, err := online.GetManager().Connect(c)
-
 	if err != nil {
-		log.Printf("get session key failed: %v", err)
+		log.Printf("Connect (unauth) failed: %v", err)
+		_ = ws.Close()
+		return
 	}
-	println("sessionKey :%v snowID:%v", sessionKey, snowID)
+	log.Printf("[WS] new unauth conn snowID=%s sessionKey=%s", snowID, sessionKey)
 
-	wsConn, err := s.connMgr.AddUnauth(snowID, ws)
+	// 交给连接管理器登记（未授权）
+	rec, err := s.connMgr.AddUnauth(snowID, ws)
 	if err != nil {
-		log.Printf("add unauth key failed: %v", err)
+		log.Printf("ConnMgr.AddUnauth failed: %v", err)
+		_ = ws.Close()
+		return
 	}
 
-	//_ = storage.PresenceOnline(user, s.gwID, presenceTTL)
+	rec.SendChan = make(chan []byte, 256) // 每连接独立发送队列
 
-	// Read goroutine: read-only, no writing
+	// --- 基本 Read 配置 ---
 	ws.SetReadLimit(1 << 20)
-	_ = ws.SetReadDeadline(time.Now().Add(pongWait))
+	_ = ws.SetReadDeadline(time.Now().Add(readPongWait))
 	ws.SetPongHandler(func(string) error {
-		return ws.SetReadDeadline(time.Now().Add(pongWait))
+		return ws.SetReadDeadline(time.Now().Add(readPongWait))
 	})
 
-	wsConnection <- BuildConnectionAck(snowID, s.gwID, sessionKey, snowID)
-
-	// Use a quit signal to coordinate cleanup
+	// --- 写协程：唯一写者（业务 + ping + 优雅关闭） ---
 	done := make(chan struct{})
-
-	// Write goroutine: the only writer (business messages + ping + close)
-	go func() {
+	go func(rec *wsConn) {
 		ticker := time.NewTicker(pingInterval)
+		first := time.NewTimer(firstPingDelay)
 		defer func() {
 			ticker.Stop()
-			_ = storage.PresenceOnline(user, s.gwID, presenceTTL) // Renew presence
-			// Always send close and shut down in the write goroutine
+			first.Stop()
+
+			// 下线 presence（在真正关闭之前）
+			//_ = online.GetManager().Offline()
+
+			// 统一由写协程发 Close 并关闭底层连接
 			_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
-			_ = ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			_ = ws.WriteMessage(websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			_ = ws.Close()
+
+			// 回收连接管理
+			s.connMgr.RemoveBySnow(rec.SnowID)
 			close(done)
+			log.Printf("[WS] closed snowID=%s user=%s", rec.SnowID, rec.UserId)
 		}()
 
+		// 注册事件（非阻塞，以免卡住当前 handler）
+		select {
+		case wsConnection <- BuildConnectionAck(rec.SnowID, s.gwID, sessionKey, rec.SnowID):
+		default:
+			log.Printf("[WS] wsConnection ch full, drop ack snowID=%s", rec.SnowID)
+		}
+		select {
+		case wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_REGISTER, From: rec.UserId}:
+		default:
+			log.Printf("[WS] wsOutbound ch full, drop REGISTER user=%s", rec.UserId)
+		}
+
+		// 循环处理：优先业务帧，其次首个 ping，再常规 ping
 		for {
 			select {
-			case f := <-s.incoming:
-				// ⚠️ This channel is global and consumed by multiple connections; temporary filtering will still "steal" other users’ messages
-				if f.GetTo() != user {
-					// Skip messages not intended for this user (but they have already been consumed) — it’s recommended to switch to a per-connection send queue (see note below)
-					continue
+			case payload, ok := <-rec.SendChan:
+				if !ok {
+					return
 				}
 				_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
-				if err := ws.WriteMessage(websocket.BinaryMessage, f.GetPayload()); err != nil {
-					// Log the error for troubleshooting
-					// log.Printf("ws write err(%s): %v", user, err)
+				if err := ws.WriteMessage(websocket.BinaryMessage, payload); err != nil {
+					log.Printf("[WS] write payload err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					return
+				}
+				// 成功写业务后，续期在线
+
+				_, s2, err := online.GetManager().Connect(c)
+				if err != nil {
+					return
+				}
+				_, err = s.connMgr.AddUnauth(s2, ws)
+				if err != nil {
 					return
 				}
 
-			case <-ticker.C:
+			case <-first.C: // 首次 ping
 				_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
 				if err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
-					// log.Printf("ws ping err(%s): %v", user, err)
+					log.Printf("[WS] first ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					return
+				}
+
+			case <-ticker.C: // 常规 ping
+				_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
+				if err := ws.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
+					log.Printf("[WS] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
 					return
 				}
 			}
 		}
-	}()
+	}(rec)
 
-	// Registration/registration messages are sent only to outbound (do not write to ws in defer)
-	wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_REGISTER, From: user}
-
-	// Read loop: read-only, exit on error, write goroutine handles cleanup
+	// ---- 读循环：只读，不写；出错即退出（写协程收尾） ----
 	for {
-		mt, data, err := ws.ReadMessage()
-		if err != nil {
-			log.Printf("ws read err(%v)", err)
+		mt, data, rerr := ws.ReadMessage()
+		if rerr != nil {
+			if websocket.IsCloseError(rerr,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseNoStatusReceived,
+			) {
+				log.Printf("[WS] peer closed snowID=%s err=%v", rec.SnowID, rerr)
+			} else if ne, ok := rerr.(net.Error); ok && ne.Timeout() {
+				log.Printf("[WS] read timeout snowID=%s err=%v", rec.SnowID, rerr)
+			} else {
+				log.Printf("[WS] read err snowID=%s err=%v", rec.SnowID, rerr)
+			}
 			break
 		}
 		if mt != websocket.TextMessage && mt != websocket.BinaryMessage {
 			continue
 		}
 
-		msg, error2 := ParseFrameJSON(data)
-		if error2 != nil {
-			log.Printf("ParseFrameJSON error:%v", error2)
+		// 解析业务帧
+		msg, perr := ParseFrameJSON(data)
+		if perr != nil {
+			// 只打印简短样本
+			sample := data
+			if len(sample) > 256 {
+				sample = sample[:256]
+			}
+			log.Printf("[WS] ParseFrameJSON err snowID=%s err=%v sample=%q len=%d",
+				rec.SnowID, perr, sample, len(data))
 			continue
 		}
 
-		payData, error1 := ExtractAuthPayload(msg.GetPayload())
-		if error1 != nil {
-			log.Printf("ExtractAuthPayload error:%v", error1)
+		// 提取授权负载（按你的协议）
+		payload := msg.GetPayload()
+		payData, aerr := ExtractAuthPayload(payload)
+		if aerr != nil {
+			log.Printf("[WS] ExtractAuthPayload err snowID=%s err=%v", rec.SnowID, aerr)
+			continue
+		}
+		if msg.ConnId == "" {
+			log.Printf("[WS] Authorize skip (empty ConnId) user=%s snowID=%s", payData.UserID, rec.SnowID)
 			continue
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), 20*time.Millisecond)
-		_, err = online.GetManager().Authorize(ctx, payData.UserID, msg.ConnId)
+		// 授权：注意第三个参数使用 ConnId（不是 SessionId）
+		ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
+		_, authErr := online.GetManager().Authorize(ctx, payData.UserID, msg.SessionId)
+		cancel()
+		if authErr != nil {
+			log.Printf("[WS] Authorize err user=%s conn=%s snowID=%s err=%v",
+				payData.UserID, msg.ConnId, rec.SnowID, authErr)
+			continue
+		}
+
+		// 绑定用户 → 续期在线 → 放宽读超时
+		rec.UserId = payData.UserID
+		err := s.connMgr.BindUser(rec.SnowID, rec.UserId)
 		if err != nil {
-			log.Printf("Authorize error:%v", err)
 			continue
 		}
 
-		log.Printf("payloadf:%v", payData)
+		_ = ws.SetReadDeadline(time.Now().Add(readIdleAfterAuth))
 
+		log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
+
+		// 如果该业务帧本身是上行消息（例如客户端发文本），按需路由给自己或别人：
+		// 这里示例：回显给自己（真实场景请在你的路由层把消息投递到目标连接的 SendChan）
+		// rec.SendChan <- msg.GetPayload().GetBizData()
 	}
 
-	// Exit: unregister and remove from registry, wait for write goroutine to close ws
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel() // 一定要调用，释放资源
-
-	suc, err := online.GetManager().OfflineUnauth(ctx, wsConn.SnowID, true, "offline")
-	if err != nil {
-		log.Printf("offline unauth err:%v", err)
+	// ---- 退出阶段：标记未授权/下线、广播 UNREGISTER、等待写协程收尾 ----
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		// 未授权下线（如果仍处于未授权）
+		_, _ = online.GetManager().OfflineUnauth(ctx, rec.SnowID, true, "offline")
+		// 已授权连接：如果你有对应 API，可在这里做 Offline(user, snowID, ...)
 	}
 
-	if suc {
-		log.Printf("offline auth success")
+	// 向全局广播 UNREGISTER（非阻塞）
+	select {
+	case wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: rec.UserId}:
+	default:
+		log.Printf("[WS] wsOutbound ch full, drop UNREGISTER user=%s", rec.UserId)
 	}
-	s.connMgr.Remove(user)
-	wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: user}
-	<-done
+
+	<-done // 等写协程真正关闭 ws & 回收
 }

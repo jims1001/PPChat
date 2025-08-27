@@ -26,13 +26,13 @@ func (c *ManagerConf) norm() {
 		c.Clock = time.Now
 	}
 	if c.SweepEvery <= 0 {
-		c.SweepEvery = 10 * time.Second
+		c.SweepEvery = 100 * time.Second
 	}
 	if c.UnauthTTL <= 0 {
-		c.UnauthTTL = 60 * time.Second
+		c.UnauthTTL = 300 * time.Second
 	}
 	if c.AuthTTL <= 0 {
-		c.AuthTTL = 2 * time.Hour
+		c.AuthTTL = 200 * time.Hour
 	}
 }
 
@@ -40,7 +40,7 @@ func (c *ManagerConf) norm() {
 
 type wsConn struct {
 	SnowID     string
-	UserID     string
+	UserId     string
 	Authorized bool
 
 	Conn   *websocket.Conn
@@ -48,6 +48,7 @@ type wsConn struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	SendChan  chan []byte // 每连接独立发送队列（业务二进制帧）
 
 	TTL       time.Duration // 当前 TTL（随授权态切换）
 	ExpireAt  time.Time     // 到期时间（过期由 sweeper 清理）
@@ -124,7 +125,7 @@ func (m *ConnManager) Add(user string, sid string, conn *websocket.Conn) {
 
 	w := &wsConn{
 		SnowID:     sid,
-		UserID:     user,
+		UserId:     user,
 		Authorized: true,
 		Conn:       conn,
 		Remote:     conn.RemoteAddr(),
@@ -216,7 +217,7 @@ func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*wsConn, e
 
 	wsConnection := &wsConn{
 		SnowID:     snowID,
-		UserID:     "",
+		UserId:     "",
 		Authorized: false,
 		Conn:       conn,
 		Remote:     conn.RemoteAddr(),
@@ -258,11 +259,11 @@ func (m *ConnManager) BindUser(snowID, user string) error {
 	}
 
 	// 如果已绑定其他用户，从旧 user 索引移除
-	if w.Authorized && w.UserID != "" && w.UserID != user {
-		if mm := m.byUser[w.UserID]; mm != nil {
+	if w.Authorized && w.UserId != "" && w.UserId != user {
+		if mm := m.byUser[w.UserId]; mm != nil {
 			delete(mm, w.SnowID)
 			if len(mm) == 0 {
-				delete(m.byUser, w.UserID)
+				delete(m.byUser, w.UserId)
 			}
 		}
 	}
@@ -279,7 +280,7 @@ func (m *ConnManager) BindUser(snowID, user string) error {
 	m.byUser[user][w.SnowID] = w
 
 	// 切授权态
-	w.UserID = user
+	w.UserId = user
 	w.Authorized = true
 	w.TTL = m.conf.AuthTTL
 	w.ExpireAt = now.Add(m.conf.AuthTTL)
@@ -313,7 +314,7 @@ func (m *ConnManager) AddAuthorized(user, snowID string, conn *websocket.Conn) e
 
 	w := &wsConn{
 		SnowID:     snowID,
-		UserID:     user,
+		UserId:     user,
 		Authorized: true,
 		Conn:       conn,
 		Remote:     conn.RemoteAddr(),
@@ -381,32 +382,32 @@ func (m *ConnManager) RemoveBySnow(snowID string) {
 	delete(m.bySnow, snowID)
 
 	// 从用户索引移除
-	if w.Authorized && w.UserID != "" {
-		if mm := m.byUser[w.UserID]; mm != nil {
+	if w.Authorized && w.UserId != "" {
+		if mm := m.byUser[w.UserId]; mm != nil {
 			delete(mm, snowID)
 			if len(mm) == 0 {
-				delete(m.byUser, w.UserID)
+				delete(m.byUser, w.UserId)
 				// 维护旧索引：如果旧索引正好指向这条，尝试换成该用户剩余任意一条；否则删掉
-				if old, ok := m.conns[w.UserID]; ok && old == w.Conn {
+				if old, ok := m.conns[w.UserId]; ok && old == w.Conn {
 					// 找替代
 					for _, rest := range mm {
 						if rest.Conn != nil {
-							m.conns[w.UserID] = rest.Conn
+							m.conns[w.UserId] = rest.Conn
 							goto DONE
 						}
 					}
-					delete(m.conns, w.UserID)
+					delete(m.conns, w.UserId)
 				}
 			} else {
 				// 维护旧索引：若旧索引指向被删的连接，则换成任意剩余一条
-				if old, ok := m.conns[w.UserID]; ok && old == w.Conn {
+				if old, ok := m.conns[w.UserId]; ok && old == w.Conn {
 					for _, rest := range mm {
 						if rest.Conn != nil {
-							m.conns[w.UserID] = rest.Conn
+							m.conns[w.UserId] = rest.Conn
 							goto DONE
 						}
 					}
-					delete(m.conns, w.UserID)
+					delete(m.conns, w.UserId)
 				}
 			}
 		}
@@ -498,21 +499,21 @@ func (m *ConnManager) sweepOnce(now time.Time) {
 			// 从主索引删除
 			delete(m.bySnow, sid)
 			// 从用户索引删除
-			if w.Authorized && w.UserID != "" {
-				if mm := m.byUser[w.UserID]; mm != nil {
+			if w.Authorized && w.UserId != "" {
+				if mm := m.byUser[w.UserId]; mm != nil {
 					delete(mm, sid)
 					if len(mm) == 0 {
-						delete(m.byUser, w.UserID)
+						delete(m.byUser, w.UserId)
 						// 维护旧索引
-						if old, ok := m.conns[w.UserID]; ok && old == w.Conn {
-							delete(m.conns, w.UserID)
+						if old, ok := m.conns[w.UserId]; ok && old == w.Conn {
+							delete(m.conns, w.UserId)
 						}
 					} else {
 						// 维护旧索引
-						if old, ok := m.conns[w.UserID]; ok && old == w.Conn {
+						if old, ok := m.conns[w.UserId]; ok && old == w.Conn {
 							for _, rest := range mm {
 								if rest.Conn != nil {
-									m.conns[w.UserID] = rest.Conn
+									m.conns[w.UserId] = rest.Conn
 									break
 								}
 							}
