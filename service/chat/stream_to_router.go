@@ -2,6 +2,7 @@ package chat
 
 import (
 	pb "PProject/gen/message"
+	handler "PProject/service/chat/handlers"
 	"context"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -21,7 +22,10 @@ type Server struct {
 	connection  chan *pb.MessageFrame // 只处理 连接的消息
 	authPayload chan *pb.MessageFrameData
 
-	connMgr *ConnManager // connection manager
+	connOutbound chan *pb.MessageFrameData
+	authOutbound chan *WSConnectionMsg
+	disp         *Dispatcher  // 处理器
+	connMgr      *ConnManager // connection manager
 }
 
 type WSConnectionMsg struct {
@@ -56,7 +60,24 @@ func NewServer(gwID, routerAddr string, conn *ConnManager) (*Server, error) {
 		reg:        newRegistry(),
 		incoming:   make(chan *pb.MessageFrame, 4096),
 		connMgr:    conn,
+		disp:       NewDispatcher(),
 	}, nil
+}
+
+func (s *Server) ConnMgr() *ConnManager {
+	return s.connMgr
+}
+
+func (s *Server) registerHandlers() {
+	ctx := &Context{S: s}
+	s.disp.Register(handler.NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
+	s.disp.Register(handler.NewAuthHandler(ctx))    // AUTH 相关
+	s.disp.Register(handler.NewPingHandler(ctx))
+	// s.disp.Register(NewDeliverHandler(ctx)) // 如需要
+}
+
+func (s *Server) DispatchFrame(f *pb.MessageFrameData, conn *WsConn) error {
+	return s.disp.Dispatch(&Context{S: s}, f, conn)
 }
 
 func (s *Server) RunToRouter() {
@@ -93,7 +114,7 @@ func (s *Server) LoopConnect(ctx context.Context) {
 			}
 		}()
 
-		outCh := s.connBound() // <-chan *pb.MessageFrameData
+		outCh := s.ConnBound() // <-chan *pb.MessageFrameData
 
 		marshaller := protojson.MarshalOptions{
 			Indent:          "",
@@ -157,7 +178,7 @@ func (s *Server) LoopAuth(ctx context.Context) {
 			}
 		}()
 
-		outCh := s.authBound() // <-chan *pb.MessageFrameData
+		outCh := s.AuthBound() // <-chan *pb.MessageFrameData
 
 		marshaller := protojson.MarshalOptions{
 			Indent:          "  ", // 美化输出
@@ -260,7 +281,7 @@ func (s *Server) loopRouter() error {
 	}()
 
 	// writer: ws_server will push REGISTER/UNREGISTER/DATA frames via a channel
-	for f := range s.outbound() {
+	for f := range s.Outbound() {
 		f.GatewayId = s.gwID
 		if err := stream.Send(f); err != nil {
 			return err
@@ -270,22 +291,22 @@ func (s *Server) loopRouter() error {
 	return nil
 }
 
-// outbound returns a read-only channel that ws_server pushes into
-func (s *Server) outbound() <-chan *pb.MessageFrame { return wsOutbound }
+// Outbound outbound returns a read-only channel that ws_server pushes into
+func (s *Server) Outbound() chan *pb.MessageFrame { return WsOutbound }
 
-func (s *Server) connBound() <-chan *pb.MessageFrameData {
-	return wsConnection
+func (s *Server) ConnBound() chan *pb.MessageFrameData {
+	return WsConnection
 }
 
-// 处理授权的消息
-func (s *Server) authBound() <-chan *WSConnectionMsg {
-	return wsAuthChannel
+// AuthBound 处理授权的消息 写端（供发送方使用）
+func (s *Server) AuthBound() chan *WSConnectionMsg {
+	return WsAuthChannel
 }
 
-// package-scope channel shared with ws_server.go for simplicity
-var wsOutbound = make(chan *pb.MessageFrame, 8192)
+// WsOutbound package-scope channel shared with ws_server.go for simplicity
+var WsOutbound = make(chan *pb.MessageFrame, 8192)
 
-// 只需要处理连接
-var wsConnection = make(chan *pb.MessageFrameData, 8192)
+// WsConnection 只需要处理连接
+var WsConnection = make(chan *pb.MessageFrameData, 8192)
 
-var wsAuthChannel = make(chan *WSConnectionMsg, 8192)
+var WsAuthChannel = make(chan *WSConnectionMsg, 8192)

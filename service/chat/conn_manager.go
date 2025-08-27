@@ -42,6 +42,7 @@ type WsConn struct {
 	SnowID     string
 	UserId     string
 	Authorized bool
+	RId        string // redis 存储的key
 
 	Conn   *websocket.Conn
 	Remote net.Addr
@@ -64,26 +65,36 @@ type ConnManager struct {
 	conf     ManagerConf
 	stopOnce sync.Once
 	stopCh   chan struct{}
+	gwId     string // 节点ID
+}
+
+var wsConnPool = sync.Pool{
+	New: func() any { return new(WsConn) },
 }
 
 // ===== 构造/关闭 =====
 
-func NewConnManager() *ConnManager {
+func NewConnManager(gwId string) *ConnManager {
 	// 默认配置（与旧构造兼容）
-	return NewConnManagerWithConf(ManagerConf{})
+	return NewConnManagerWithConf(ManagerConf{}, gwId)
 }
 
-func NewConnManagerWithConf(conf ManagerConf) *ConnManager {
+func NewConnManagerWithConf(conf ManagerConf, gwId string) *ConnManager {
 	conf.norm()
 	m := &ConnManager{
 		conns:  make(map[string]*websocket.Conn),
 		bySnow: make(map[string]*WsConn),
 		byUser: make(map[string]map[string]*WsConn),
 		conf:   conf,
+		gwId:   gwId,
 		stopCh: make(chan struct{}),
 	}
 	go m.sweeper()
 	return m
+}
+
+func (m *ConnManager) GwId() string {
+	return m.gwId
 }
 
 func (m *ConnManager) Close() {
@@ -93,10 +104,13 @@ func (m *ConnManager) Close() {
 	defer m.mu.Unlock()
 	for _, x := range m.bySnow {
 		closeQuiet(x.Conn)
+		x.Release()
 	}
+
 	m.conns = map[string]*websocket.Conn{}
 	m.bySnow = map[string]*WsConn{}
 	m.byUser = map[string]map[string]*WsConn{}
+
 }
 
 // ===== 兼容旧 API（Add/Get/Remove/Send）=====
@@ -202,6 +216,44 @@ func (m *ConnManager) Send(user string, data []byte) error {
 
 // ===== 新能力：snowID / 未授权→授权 / 心跳 / TTL / 清理 / 最大连接数 / 挤下线 =====
 
+// Release 完全释放，断开所有外部引用后 Put 回 Pool
+func (c *WsConn) Release() {
+	// 断引用，避免悬挂指针
+
+	c.SnowID, c.UserId = "", ""
+	c.TTL = 0
+	c.ExpireAt = time.Time{}
+	c.CreatedAt = time.Time{}
+	c.UpdatedAt = time.Time{}
+	c.Heartbeat = time.Time{}
+
+	wsConnPool.Put(c)
+}
+
+func acquireWsConn(snowID string, conn *websocket.Conn, unauthTTL time.Duration, now time.Time) *WsConn {
+	c := wsConnPool.Get().(*WsConn)
+	*c = WsConn{} // 清零避免脏数据
+
+	c.SnowID = snowID
+	c.UserId = "" // 未授权
+	c.Authorized = false
+	c.Conn = conn
+	if ra := conn.RemoteAddr(); ra != nil {
+		c.Remote = conn.RemoteAddr()
+	}
+
+	// 如有发送队列/ctx，这里新建（可选）
+	// c.SendQ = make(chan *pb.MessageFrameData, 256)
+	// c.ctx, c.cancel = context.WithCancel(context.Background())
+
+	c.CreatedAt = now
+	c.UpdatedAt = now
+	c.Heartbeat = now
+	c.TTL = unauthTTL
+	c.ExpireAt = now.Add(unauthTTL)
+	return c
+}
+
 // AddUnauth : 新连接（未授权）登记；仅有 snowID
 func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*WsConn, error) {
 	if snowID == "" || conn == nil {
@@ -215,20 +267,9 @@ func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*WsConn, e
 		return nil, errors.New("snowID exists")
 	}
 
-	wsConnection := &WsConn{
-		SnowID:     snowID,
-		UserId:     "",
-		Authorized: false,
-		Conn:       conn,
-		Remote:     conn.RemoteAddr(),
-		CreatedAt:  now,
-		UpdatedAt:  now,
-		TTL:        m.conf.UnauthTTL,
-		ExpireAt:   now.Add(m.conf.UnauthTTL),
-		Heartbeat:  now,
-	}
-
+	wsConnection := acquireWsConn(snowID, conn, m.conf.UnauthTTL, now)
 	m.bySnow[snowID] = wsConnection
+
 	return wsConnection, nil
 }
 
@@ -589,6 +630,7 @@ func closeQuiet(c *websocket.Conn) {
 	if c != nil {
 		_ = c.Close()
 	}
+
 }
 
 func genSnowID() string {

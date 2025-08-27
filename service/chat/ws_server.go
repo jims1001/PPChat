@@ -3,15 +3,11 @@ package chat
 import (
 	pb "PProject/gen/message"
 	online "PProject/service/storage"
-	decode "PProject/tools/decode"
 	errors "PProject/tools/errs"
 	"context"
-	"fmt"
 	"github.com/emicklei/go-restful/v3/log"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/structpb"
 	"net"
 	"net/http"
 	"time"
@@ -19,366 +15,8 @@ import (
 
 var upgraded = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: func(r *http.Request) bool { return true }}
 
-// AuthPayload 是 custom_elem.data 里的授权 JSON 负载。
-type AuthPayload struct {
-	Type      string   `json:"type"`                // 固定 "auth"
-	Token     string   `json:"token"`               // 明文 token / JWT
-	TokenHash string   `json:"token_hash"`          // hex(sha256(token))
-	TS        int64    `json:"ts,omitempty"`        // 客户端毫秒时间戳（可选）
-	Nonce     string   `json:"nonce,omitempty"`     // 随机串（可选）
-	UserID    string   `json:"user_id,omitempty"`   // 冗余（可选）
-	DeviceID  string   `json:"device_id,omitempty"` // 冗余（可选）
-	Scope     []string `json:"scope,omitempty"`     // 权限（可选）
-	Sig       string   `json:"sig,omitempty"`       // 如有额外签名（可选）
-}
-
-func ParseFrameJSON(raw []byte) (*pb.MessageFrameData, error) {
-	frame := &pb.MessageFrameData{}
-	um := protojson.UnmarshalOptions{
-		DiscardUnknown: true, // 忽略未知字段，增强兼容性
-	}
-	if err := um.Unmarshal(raw, frame); err != nil {
-		return nil, fmt.Errorf("unmarshal frame failed: %w", err)
-	}
-	return frame, nil
-}
-
-func ExtractAuthPayload(msg *pb.MessageData) (*AuthPayload, error) {
-	if msg == nil {
-		return nil, errors.New("nil MessageData")
-	}
-	ce := msg.GetCustomElem()
-	if ce == nil {
-		return nil, errors.New("custom_elem is nil")
-	}
-	st := ce.GetData() // ★ Data 是 *struct.Struct
-	if st == nil {
-		return nil, errors.New("custom_elem.data (Struct) is nil")
-	}
-	payload, err := decode.DecodeStruct[AuthPayload](st)
-	if err != nil {
-		return nil, err
-	}
-
-	return payload, nil
-}
-
-func BuildAuthAckSystemEvent(req *pb.MessageFrameData, ok bool, code int, reason string, extras map[string]string) *pb.MessageFrameData {
-	if req == nil {
-		return nil
-	}
-	now := time.Now().UnixMilli()
-
-	// 复制必要头并对调 from/to
-	resp := &pb.MessageFrameData{
-		Type:        pb.MessageFrameData_DELIVER, // 回执/下发
-		From:        "auth_service",              // 你的服务名/系统ID
-		To:          req.GetFrom(),
-		Ts:          now,
-		GatewayId:   req.GetGatewayId(),
-		ConnId:      req.GetConnId(),
-		TenantId:    req.GetTenantId(),
-		AppId:       req.GetAppId(),
-		Qos:         pb.MessageFrameData_QOS_AT_MOST_ONCE,
-		Priority:    pb.MessageFrameData_PRIORITY_DEFAULT,
-		AckRequired: false,              // 回执一般不再需要 ACK
-		AckId:       req.GetAckId(),     // 透传请求的 ack_id，便于前端/网关匹配
-		TraceId:     req.GetTraceId(),   // 透传 trace
-		SessionId:   req.GetSessionId(), // 透传会话
-		DeviceId:    req.GetDeviceId(),
-		Platform:    "Server",
-		AppVersion:  "server-1.0.0",
-		Locale:      req.GetLocale(),
-		// payload 可以为空（仅用 system_event 承载）
-	}
-
-	// 组织 system_event 数据
-	data := map[string]string{
-		"ok":    boolToStr(ok),
-		"code":  intToStr(code),
-		"from":  "auth",
-		"scope": "", // 可根据实际写入
-	}
-	// 合并 extras
-	for k, v := range extras {
-		data[k] = v
-	}
-
-	resp.SystemEvent = &pb.SystemEvent{
-		EventType: "auth_ack",
-		Reason:    reason,
-		Data:      data,
-	}
-	return resp
-}
-
-// -------- 2) 构造 payload.custom_elem 风格回执（结构化通知） --------
-
-// BuildAuthAckPayload 构造一个带 payload 的回执：payload.content_type=CUSTOM，
-// custom_elem.description="auth_ack"，data 为 JSON 对象（Struct）。
-func BuildAuthAckPayload(req *pb.MessageFrameData, ok bool, code int, reason string, info map[string]any) *pb.MessageFrameData {
-	if req == nil {
-		return nil
-	}
-	now := time.Now().UnixMilli()
-
-	// 自定义 data（对象形式）
-	payloadData := map[string]any{
-		"type":   "auth_ack",
-		"ok":     ok,
-		"code":   code,
-		"reason": reason,
-		"ts":     now,
-		// 这里可以带上 token_hash / user_id / device_id 等
-	}
-	for k, v := range info {
-		payloadData[k] = v
-	}
-	st, _ := structpb.NewStruct(payloadData)
-
-	msg := &pb.MessageData{
-		// 你也可以填更多上下文，例如 send_id/recv_id 等
-		SessionType:      4,   // NOTIFICATION，按你的枚举
-		MsgFrom:          2,   // SYSTEM
-		ContentType:      399, // CUSTOM
-		SenderPlatformId: 9,   // API/Server，按你的枚举
-		CreateTime:       now,
-		CustomElem: &pb.CustomElem{
-			Description: "auth_ack",
-			Extension:   "v1",
-			Data:        st, // ★ 关键：Struct 对象
-		},
-		TraceId:   req.GetTraceId(),
-		SessionId: req.GetSessionId(),
-	}
-
-	resp := &pb.MessageFrameData{
-		Type:        pb.MessageFrameData_DELIVER,
-		From:        "auth_service",
-		To:          req.GetFrom(),
-		Ts:          now,
-		GatewayId:   req.GetGatewayId(),
-		ConnId:      req.GetConnId(),
-		TenantId:    req.GetTenantId(),
-		AppId:       req.GetAppId(),
-		Qos:         pb.MessageFrameData_QOS_AT_MOST_ONCE,
-		Priority:    pb.MessageFrameData_PRIORITY_DEFAULT,
-		AckRequired: false,
-		AckId:       req.GetAckId(),
-		TraceId:     req.GetTraceId(),
-		SessionId:   req.GetSessionId(),
-		DeviceId:    req.GetDeviceId(),
-		Platform:    "Server",
-		AppVersion:  "server-1.0.0",
-		Locale:      req.GetLocale(),
-		Body:        &pb.MessageFrameData_Payload{Payload: msg},
-	}
-	return resp
-}
-
-// -------- 3) 同时带 system_event 与 payload 的复合回执（可选） --------
-
-// BuildAuthAckFull 同时设置 system_event 与 payload.custom_elem。
-// 有些前端只订阅 system_event，有些需要收消息，这样都能覆盖。
-func BuildAuthAckFull(req *pb.MessageFrameData, ok bool, code int, reason string, extras map[string]string, info map[string]any) *pb.MessageFrameData {
-	resp := BuildAuthAckPayload(req, ok, code, reason, info)
-	if resp == nil {
-		return nil
-	}
-	// 叠加 system_event
-	data := map[string]string{
-		"ok":   boolToStr(ok),
-		"code": intToStr(code),
-	}
-	for k, v := range extras {
-		data[k] = v
-	}
-	resp.SystemEvent = &pb.SystemEvent{
-		EventType: "auth_ack",
-		Reason:    reason,
-		Data:      data,
-	}
-	return resp
-}
-
-// BuildSessionAck 构造“连接成功”的返回消息
-func BuildSessionAck(toUserID, connID, gatewayID, sessionKey, nodeID string) *pb.MessageFrameData {
-	now := time.Now().UnixMilli()
-
-	// 构造 custom_elem.data 对象
-	data := map[string]any{
-		"type":        "session_ack",
-		"session_key": sessionKey,
-		"node_id":     nodeID,
-		"ts":          now,
-	}
-	st, _ := structpb.NewStruct(data)
-
-	// 构造 payload
-	msg := &pb.MessageData{
-		ContentType:      399, // CUSTOM
-		SessionType:      4,   // 通知/系统会话，按你的枚举
-		MsgFrom:          2,   // SYSTEM
-		SenderPlatformId: 9,   // SERVER
-		CreateTime:       now,
-		CustomElem: &pb.CustomElem{
-			Description: "session_ack",
-			Extension:   "v1",
-			Data:        st,
-		},
-	}
-
-	// 构造 Frame
-	return &pb.MessageFrameData{
-		Type:        pb.MessageFrameData_DELIVER, // 下发
-		From:        "auth_service",              // 或者 gateway 节点名
-		To:          toUserID,
-		Ts:          now,
-		GatewayId:   gatewayID,
-		ConnId:      connID,
-		AppId:       "your-app", // 可选
-		Body:        &pb.MessageFrameData_Payload{Payload: msg},
-		Qos:         pb.MessageFrameData_QOS_AT_LEAST_ONCE,
-		Priority:    pb.MessageFrameData_PRIORITY_DEFAULT,
-		AckRequired: false,
-	}
-}
-
-func BuildConnectionAck(connID, gatewayID, sessionID, nodeID string) *pb.MessageFrameData {
-	now := time.Now().UnixMilli()
-	return &pb.MessageFrameData{
-		Type:      pb.MessageFrameData_CONN, // 连接确认
-		Ts:        now,
-		GatewayId: gatewayID,
-		ConnId:    connID,
-		SessionId: sessionID, // ★ 直接返回给客户端
-		Meta: map[string]string{ // ★ 可选扩展信息
-			"node_id": nodeID,
-		},
-		// payload 可以为空
-	}
-}
-
-func BuildAuthAck(req *pb.MessageFrameData) *pb.MessageFrameData {
-	now := time.Now().UnixMilli()
-
-	// 构造 custom_elem.data 的 JSON
-	data := map[string]any{
-		"ok":              true,
-		"user_id":         "user_10001",
-		"session_id":      "748508987506704384",
-		"conn_id":         "c-77f0d2",
-		"device_id":       "aabbccddeeff00112233",
-		"granted_scopes":  []any{"read", "write", "profile"},
-		"token_expire_at": now + 3600*1000, // 1小时后过期
-		"server_time":     now,
-		"heartbeat": map[string]any{
-			"ping_interval_ms": 25000,
-			"pong_timeout_ms":  75000,
-		},
-		"policy": map[string]any{
-			"max_sessions":         5,
-			"kick_unauth_after_ms": 30000,
-		},
-	}
-
-	st, err := structpb.NewStruct(data)
-	if err != nil {
-		log.Printf("BuildAuthAck stdata is error: %v ", err)
-	}
-	return &pb.MessageFrameData{
-		Type:        pb.MessageFrameData_AUTH,
-		From:        "gateway_auth",
-		To:          "user_10001",
-		Ts:          now,
-		GatewayId:   "gw-1a",
-		ConnId:      "c-77f0d2",
-		TenantId:    "tenant_001",
-		AppId:       "im_app",
-		Qos:         pb.MessageFrameData_QOS_AT_LEAST_ONCE,
-		Priority:    pb.MessageFrameData_PRIORITY_DEFAULT,
-		AckRequired: false,
-		AckId:       req.GetAckId(), // 回显客户端的 ack_id
-		DedupId:     fmt.Sprintf("authack-%d", now),
-		Nonce:       "srv-nonce-123",
-		ExpiresAt:   now + 3600*1000,
-		SessionId:   "748508987506704384",
-		DeviceId:    "aabbccddeeff00112233",
-		Platform:    "Web",
-		AppVersion:  "1.0.3",
-		Locale:      "zh-CN",
-		Meta: map[string]string{
-			"ip": "203.0.113.10",
-			"ua": "Chrome/139",
-		},
-
-		Body: &pb.MessageFrameData_Payload{
-			Payload: &pb.MessageData{
-				ClientMsgId:      "cmid-0001",
-				ServerMsgId:      "smid-authack-0001",
-				CreateTime:       now,
-				SendTime:         now,
-				SessionType:      4, // NOTIFICATION
-				SendId:           "gateway_auth",
-				RecvId:           "user_10001",
-				MsgFrom:          2,     // SYSTEM
-				ContentType:      31001, // AUTH_ACK (自定义)
-				SenderPlatformId: 99,
-				SenderNickname:   "System", // 把用户信息 JSON 放这里
-				IsRead:           false,
-				Status:           0,
-				CustomElem: &pb.CustomElem{
-					Description: "session_ack",
-					Extension:   "v1",
-					Data:        st,
-				},
-			},
-		},
-	}
-}
-
-// -------- 4) 小工具 --------
-
-func boolToStr(b bool) string {
-	if b {
-		return "true"
-	}
-	return "false"
-}
-func intToStr(i int) string {
-	return fmtInt(i)
-}
-
-// 为避免额外依赖，这里简单封装（或直接用 strconv.Itoa）
-func fmtInt(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var buf [20]byte
-	pos := len(buf)
-	for i > 0 {
-		pos--
-		buf[pos] = byte('0' + i%10)
-		i /= 10
-	}
-	if neg {
-		pos--
-		buf[pos] = '-'
-	}
-	return string(buf[pos:])
-}
-
 // HandleWS ===== WebSocket 处理（修正版） =====
 func (s *Server) HandleWS(c *gin.Context) {
-	user := c.Query("user")
-	if user == "" {
-		c.String(http.StatusBadRequest, "missing user")
-		return
-	}
 
 	ws, err := upgraded.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -429,6 +67,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 		_ = ws.Close()
 		return
 	}
+	rec.RId = sessionKey
 
 	rec.SendChan = make(chan []byte, 256) // 每连接独立发送队列
 
@@ -465,12 +104,12 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 		// 注册事件（非阻塞，以免卡住当前 handler）
 		select {
-		case wsConnection <- BuildConnectionAck(rec.SnowID, s.gwID, sessionKey, rec.SnowID):
+		case WsConnection <- BuildConnectionAck(rec.SnowID, s.gwID, sessionKey, rec.SnowID):
 		default:
 			log.Printf("[WS] wsConnection ch full, drop ack snowID=%s", rec.SnowID)
 		}
 		select {
-		case wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_REGISTER, From: rec.UserId}:
+		case WsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_REGISTER, From: rec.UserId}:
 		default:
 			log.Printf("[WS] wsOutbound ch full, drop REGISTER user=%s", rec.UserId)
 		}
@@ -582,7 +221,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 			authAckMsg := BuildAuthAck(msg)
 
-			wsAuthChannel <- &WSConnectionMsg{
+			WsAuthChannel <- &WSConnectionMsg{
 				Frame: authAckMsg,
 				Conn:  rec,
 				Req:   msg,
@@ -593,9 +232,6 @@ func (s *Server) HandleWS(c *gin.Context) {
 			log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		}
 
-		// 如果该业务帧本身是上行消息（例如客户端发文本），按需路由给自己或别人：
-		// 这里示例：回显给自己（真实场景请在你的路由层把消息投递到目标连接的 SendChan）
-		// rec.SendChan <- msg.GetPayload().GetBizData()
 	}
 
 	// ---- 退出阶段：标记未授权/下线、广播 UNREGISTER、等待写协程收尾 ----
@@ -603,13 +239,18 @@ func (s *Server) HandleWS(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		// 未授权下线（如果仍处于未授权）
-		_, _ = online.GetManager().OfflineUnauth(ctx, rec.SnowID, true, "offline")
+		if rec.UserId != "" {
+			_, _ = online.GetManager().Offline(ctx, rec.UserId, rec.SnowID, true, "offline")
+		} else {
+			_, _ = online.GetManager().OfflineUnauth(ctx, rec.SnowID, true, "offline")
+		}
+
 		// 已授权连接：如果你有对应 API，可在这里做 Offline(user, snowID, ...)
 	}
 
 	// 向全局广播 UNREGISTER（非阻塞）
 	select {
-	case wsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: rec.UserId}:
+	case WsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: rec.UserId}:
 	default:
 		log.Printf("[WS] wsOutbound ch full, drop UNREGISTER user=%s", rec.UserId)
 	}

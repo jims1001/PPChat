@@ -36,7 +36,7 @@ func main() {
 		routerAddr = "127.0.0.1:50051"
 	}
 
-	conn := chat.NewConnManager()
+	conn := chat.NewConnManager(gwID)
 
 	// 3) Create gateway instance
 	g, err := chat.NewServer(gwID, routerAddr, conn)
