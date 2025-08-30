@@ -2,8 +2,9 @@ package model
 
 import (
 	mgo "PProject/service/mgo"
-	"go.mongodb.org/mongo-driver/mongo"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type UserSession struct {

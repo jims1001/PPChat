@@ -29,7 +29,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 		presenceTTL       = 300 * time.Second
 		readPongWait      = 75 * time.Second
 		pingInterval      = 25 * time.Second
-		writeWait         = 10 * time.Second // 拉长以排查写超时
+		writeWait         = 10 * time.Second // 拉长以排查写超时9
 		firstPingDelay    = 5 * time.Second  // 首个 ping 延后，避免刚连上即写超时
 		authTimeout       = 2 * time.Second  // 从 400ms 拉长，避免偶发超时
 		readIdleAfterAuth = 2 * time.Minute

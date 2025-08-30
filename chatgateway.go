@@ -6,13 +6,14 @@ import (
 	mid "PProject/middleware"
 	"PProject/module/user"
 	"PProject/service/chat"
+	"log"
+	"net"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"log"
-	"net"
-	"os"
 )
 
 func main() {
@@ -77,6 +78,7 @@ func main() {
 	r.GET("/chat", g.HandleWS) // e.g. ws://localhost:8080/chat?user=A&to=B
 	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
+	mid.POST(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
 	//r.POST("/check", user.HandlerCheck)
 	//r.POST("/user")
 

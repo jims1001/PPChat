@@ -2,15 +2,15 @@ package chat
 
 import (
 	pb "PProject/gen/message"
-	handler "PProject/service/chat/handlers"
 	"context"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
-	"log"
-	"time"
 )
 
 type Server struct {
@@ -69,10 +69,10 @@ func (s *Server) ConnMgr() *ConnManager {
 }
 
 func (s *Server) registerHandlers() {
-	ctx := &Context{S: s}
-	s.disp.Register(handler.NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
-	s.disp.Register(handler.NewAuthHandler(ctx))    // AUTH 相关
-	s.disp.Register(handler.NewPingHandler(ctx))
+	//ctx := &Context{S: s}
+	//s.disp.Register(NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
+	//s.disp.Register(NewAuthHandler(ctx))    // AUTH 相关
+	//s.disp.Register(NewPingHandler(ctx))
 	// s.disp.Register(NewDeliverHandler(ctx)) // 如需要
 }
 

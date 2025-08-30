@@ -11,11 +11,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
-	"time"
 )
 
 // LoginParams 登录入参：用于生成会话记录
@@ -38,7 +40,13 @@ type UserSessionKey struct {
 	DeviceID   string `json:"device_id"`
 }
 
-func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
+func Login(ctx context.Context, in LoginParams) (*usermodel.UserSession, error) {
+
+	user, err := GetUserById(ctx, in.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
 	now := in.Now
 	if now.IsZero() {
@@ -51,10 +59,10 @@ func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
 	// 生成 AccessToken & Hash
 	token, hash, exp, err := jwtlib.Generate(opts, in.UserID, in.Scopes)
 	if err != nil {
-		return usermodel.UserSession{}, err
+		return nil, err
 	}
 
-	key := UserSessionKey{UserId: in.UserID,
+	key := UserSessionKey{UserId: user.UserID,
 		DeviceType: in.DeviceType,
 		DeviceID:   in.DeviceID,
 	}
@@ -81,10 +89,10 @@ func Login(ctx context.Context, in LoginParams) (usermodel.UserSession, error) {
 
 	err = ReLoginArchiveAndReplace(ctx, key, rec)
 	if err != nil {
-		return usermodel.UserSession{}, err
+		return nil, err
 	}
 
-	return rec, nil
+	return &rec, nil
 }
 
 func Verify(ctx context.Context,
@@ -258,4 +266,35 @@ func ReLoginArchiveAndReplace(ctx context.Context,
 	_, _ = pipe.Exec(ctx) // 失败可以做补偿或日志告警
 
 	return nil
+}
+
+func GetUserByToken(ctx context.Context, tokenStr, tokenHash string) (*usermodel.User, error) {
+	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
+	// 1. 验证 token // 假设你定义了
+	claims, err := jwtlib.Verify(opts, tokenStr, tokenHash)
+	if err != nil {
+		return nil, fmt.Errorf("token verify failed: %w", err)
+	}
+
+	// 2. 从 claims 里取 user_id
+	userID, err := claims.GetSubject()
+	if err != nil {
+		return nil, fmt.Errorf("invalid token: no user_id in claims")
+	}
+	user, err := GetUserById(ctx, userID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func GetUserById(ctx context.Context, userId string) (*usermodel.User, error) {
+	var user usermodel.User
+	err := user.Collection().FindOne(ctx, bson.M{"user_id": strings.TrimSpace(userId)}).Decode(&user)
+	if err != nil {
+		return nil, fmt.Errorf("find user failed: %w", err)
+	}
+	return &user, nil
 }

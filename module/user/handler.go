@@ -6,8 +6,9 @@ import (
 	"PProject/tools/errs"
 	"PProject/tools/ids"
 	"context"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type CheckParams struct {
@@ -58,9 +59,19 @@ func HandlerCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, global.Sucess(session))
 }
 
-func handleUserInfo(c *gin.Context) {
+func HandleUserInfo(c *gin.Context) {
 	ctx := context.Background()
 	defer ctx.Done()
 
-	c.JSON(http.StatusOK, global.Sucess(""))
+	authInfo, err := global.GetAuthInfo(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+	}
+	
+	user, err := service.GetUserByToken(c, authInfo.Token, authInfo.Hash)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+	}
+
+	c.JSON(http.StatusOK, user)
 }
