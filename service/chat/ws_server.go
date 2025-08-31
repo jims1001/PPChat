@@ -5,12 +5,14 @@ import (
 	online "PProject/service/storage"
 	errors "PProject/tools/errs"
 	"context"
-	"github.com/emicklei/go-restful/v3/log"
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/emicklei/go-restful/v3/log"
+	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
+	"github.com/gorilla/websocket"
 )
 
 var upgraded = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: func(r *http.Request) bool { return true }}
@@ -228,8 +230,19 @@ func (s *Server) HandleWS(c *gin.Context) {
 			}
 
 			_ = ws.SetReadDeadline(time.Now().Add(readIdleAfterAuth))
-
 			log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
+		} else if msg.Type == pb.MessageFrameData_DATA {
+
+			to := msg.To // 接收者
+			// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic
+			glog.Info("[WS] 接收到消息  fromUser =%v toUser:%v ", msg.From, to)
+
+			WsDataChannel <- &WSConnectionMsg{
+				Frame: msg,
+				Conn:  rec,
+				Req:   msg,
+			}
+			log.Printf("[WS] 接收到消息is user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		}
 
 	}

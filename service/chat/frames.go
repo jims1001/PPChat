@@ -6,9 +6,10 @@ import (
 	decode "PProject/tools/decode"
 	errors "PProject/tools/errs"
 	"fmt"
+	"time"
+
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
-	"time"
 )
 
 func ParseFrameJSON(raw []byte) (*pb.MessageFrameData, error) {
@@ -100,10 +101,10 @@ func BuildAuthAck(req *pb.MessageFrameData) *pb.MessageFrameData {
 	now := time.Now().UnixMilli()
 	st, _ := structpb.NewStruct(map[string]any{
 		"ok":              true,
-		"user_id":         "user_10001",
-		"session_id":      "748508987506704384",
-		"conn_id":         "c-77f0d2",
-		"device_id":       "aabbccddeeff00112233",
+		"user_id":         req.From,
+		"session_id":      req.SessionId,
+		"conn_id":         req.ConnId,
+		"device_id":       req.DeviceId,
 		"granted_scopes":  []any{"read", "write", "profile"},
 		"token_expire_at": now + 3600*1000,
 		"server_time":     now,
@@ -119,36 +120,36 @@ func BuildAuthAck(req *pb.MessageFrameData) *pb.MessageFrameData {
 
 	return &pb.MessageFrameData{
 		Type:       pb.MessageFrameData_AUTH,
-		From:       "gateway_auth",
-		To:         "user_10001",
+		From:       req.To,
+		To:         req.From,
 		Ts:         now,
-		GatewayId:  "gw-1a",
-		ConnId:     "c-77f0d2",
-		TenantId:   "tenant_001",
-		AppId:      "im_app",
+		GatewayId:  req.GatewayId,
+		ConnId:     req.ConnId,
+		TenantId:   req.TenantId,
+		AppId:      req.AppId,
 		Qos:        pb.MessageFrameData_QOS_AT_LEAST_ONCE,
 		Priority:   pb.MessageFrameData_PRIORITY_DEFAULT,
 		AckId:      req.GetAckId(),
 		DedupId:    fmt.Sprintf("authack-%d", now),
-		Nonce:      "srv-nonce-123",
+		Nonce:      req.Nonce,
 		ExpiresAt:  now + 3600*1000,
-		SessionId:  "748508987506704384",
-		DeviceId:   "aabbccddeeff00112233",
-		Platform:   "Web",
-		AppVersion: "1.0.3",
-		Locale:     "zh-CN",
+		SessionId:  req.SessionId,
+		DeviceId:   req.DeviceId,
+		Platform:   req.Platform,
+		AppVersion: req.AppVersion,
+		Locale:     req.Locale,
 		Meta:       map[string]string{"ip": "203.0.113.10", "ua": "Chrome/139"},
 		Body: &pb.MessageFrameData_Payload{
 			Payload: &pb.MessageData{
-				ClientMsgId:      "cmid-0001",
-				ServerMsgId:      "smid-authack-0001",
+				ClientMsgId:      req.GetPayload().ClientMsgId,
+				ServerMsgId:      req.SessionId,
 				CreateTime:       now,
 				SendTime:         now,
 				SessionType:      4,
 				SendId:           "gateway_auth",
-				RecvId:           "user_10001",
-				MsgFrom:          2,
-				ContentType:      31001,
+				RecvId:           req.From,
+				MsgFrom:          req.GetPayload().MsgFrom,
+				ContentType:      req.GetPayload().ContentType,
 				SenderPlatformId: 99,
 				SenderNickname:   "System",
 				IsRead:           false,

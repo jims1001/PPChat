@@ -22,10 +22,11 @@ type Server struct {
 	connection  chan *pb.MessageFrame // 只处理 连接的消息
 	authPayload chan *pb.MessageFrameData
 
-	connOutbound chan *pb.MessageFrameData
-	authOutbound chan *WSConnectionMsg
-	disp         *Dispatcher  // 处理器
-	connMgr      *ConnManager // connection manager
+	connOutbound chan *pb.MessageFrameData // 连接数据处理
+	authOutbound chan *WSConnectionMsg     // 授权数据处理
+	dataOutbound chan *WSConnectionMsg     // 普通数据处理
+	disp         *Dispatcher               // 处理器
+	connMgr      *ConnManager              // connection manager
 }
 
 type WSConnectionMsg struct {
@@ -88,6 +89,7 @@ func (s *Server) RunToRouter() {
 	defer cancel()
 	s.LoopConnect(ctx)
 	s.LoopAuth(ctx)
+	s.LoopData(ctx)
 
 	for {
 		if err := s.loopRouter(); err != nil {
@@ -181,9 +183,9 @@ func (s *Server) LoopAuth(ctx context.Context) {
 		outCh := s.AuthBound() // <-chan *pb.MessageFrameData
 
 		marshaller := protojson.MarshalOptions{
-			Indent:          "  ", // 美化输出
-			UseEnumNumbers:  true, // 枚举用数字
-			EmitUnpopulated: true, // 建议调成 true，客户端好解析
+			Indent:          "",    // 美化输出
+			UseEnumNumbers:  true,  // 枚举用数字
+			EmitUnpopulated: false, // 建议调成 true，客户端好解析
 		}
 
 		for {
@@ -219,6 +221,71 @@ func (s *Server) LoopAuth(ctx context.Context) {
 					continue
 				}
 				log.Printf("[loopConnect] send frame to data%s", string(data))
+
+				// 发送（带写超时）
+				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
+					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					// 发送失败：关闭并从管理器移除，防止死连接占用资源
+					_ = ws.Close()
+					s.connMgr.Remove(connID)
+					continue
+				}
+			}
+		}
+	}()
+}
+
+func (s *Server) LoopData(ctx context.Context) {
+
+	go func() {
+		// defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[loopConnect] panic recovered: %v", r)
+			}
+		}()
+
+		outCh := s.DataOutBound() // <-chan *pb.MessageFrameData
+
+		marshaller := protojson.MarshalOptions{
+			Indent:          "",    // 美化输出
+			UseEnumNumbers:  true,  // 枚举用数字
+			EmitUnpopulated: false, // 建议调成 true，客户端好解析
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[数据处理] ctx done: %v", ctx.Err())
+				return
+
+			case msg, ok := <-outCh:
+				if !ok {
+					log.Printf("[数据处理] 数据处理通道已经关闭")
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				connID := msg.Frame.GetConnId()
+				if connID == "" {
+					log.Printf("[数据处理] 没有获取到连接 conn_id, trace_id=%s type=%v", msg.Frame.GetTraceId(), msg.Frame.GetType())
+					continue
+				}
+
+				ws, res := s.connMgr.Get(msg.Frame.To)
+				if !res {
+					log.Printf("[数据处理] 获取到有效的客户端   error: %v", res)
+					continue
+				}
+
+				// 序列化（一次性）
+				data, err := marshaller.Marshal(msg.Frame)
+				if err != nil {
+					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", connID, err)
+					continue
+				}
+				log.Printf("[数据处理] 需要发送到数据 to data%s", string(data))
 
 				// 发送（带写超时）
 				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
@@ -303,6 +370,10 @@ func (s *Server) AuthBound() chan *WSConnectionMsg {
 	return WsAuthChannel
 }
 
+func (s *Server) DataOutBound() chan *WSConnectionMsg {
+	return WsDataChannel
+}
+
 // WsOutbound package-scope channel shared with ws_server.go for simplicity
 var WsOutbound = make(chan *pb.MessageFrame, 8192)
 
@@ -310,3 +381,5 @@ var WsOutbound = make(chan *pb.MessageFrame, 8192)
 var WsConnection = make(chan *pb.MessageFrameData, 8192)
 
 var WsAuthChannel = make(chan *WSConnectionMsg, 8192)
+
+var WsDataChannel = make(chan *WSConnectionMsg, 8192)

@@ -3,12 +3,13 @@ package storage
 import (
 	redis2 "PProject/service/storage/redis"
 	errors "PProject/tools/errs"
-	ids "PProject/tools/ids"
+	"PProject/tools/ids"
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // ===== 配置 =====
@@ -144,19 +145,104 @@ end
 return victims
 `
 
+// ====== 新增三段：在线判断 / 拉取全部有效会话 / 拉取最新有效会话 ======
+
+// 清理过期并返回“所有有效会话键”
+// KEYS[1] = user index key
+// ARGV[1] = nowUnix
+// 返回：还有效的会话键数组（顺带把过期的删掉）
+const luaGetActiveAndSweep = `
+local userZ = KEYS[1]
+local now   = tonumber(ARGV[1])
+
+-- 清理过期（<= now）
+local victims = redis.call("ZRANGEBYSCORE", userZ, "-inf", now)
+for _, v in ipairs(victims) do
+  redis.call("ZREM", userZ, v)
+  redis.call("DEL", v)
+end
+
+-- 返回仍有效（> now）的会话成员
+local actives = redis.call("ZRANGEBYSCORE", userZ, now + 1, "+inf")
+
+if redis.call("ZCARD", userZ) > 0 then
+  redis.call("EXPIRE", userZ, 3600)
+end
+return actives
+`
+
+// 清理过期并返回在线标志与数量
+// KEYS[1] = user index key
+// ARGV[1] = nowUnix
+// 返回：数组 [在线标志(0/1), 数量]
+const luaIsOnline = `
+local userZ = KEYS[1]
+local now   = tonumber(ARGV[1])
+
+-- 清理过期
+local victims = redis.call("ZRANGEBYSCORE", userZ, "-inf", now)
+for _, v in ipairs(victims) do
+  redis.call("ZREM", userZ, v)
+  redis.call("DEL", v)
+end
+
+local cnt = redis.call("ZCOUNT", userZ, now + 1, "+inf")
+if redis.call("ZCARD", userZ) > 0 then
+  redis.call("EXPIRE", userZ, 3600)
+end
+
+if cnt > 0 then
+  return {1, cnt}
+else
+  return {0, 0}
+end
+`
+
+// 清理过期并返回最新（score 最大）的有效会话
+// KEYS[1] = user index key
+// ARGV[1] = nowUnix
+// 返回：字符串（最新有效会话键，不存在则空串）
+const luaGetNewestActive = `
+local userZ = KEYS[1]
+local now   = tonumber(ARGV[1])
+
+-- 清理过期
+local victims = redis.call("ZRANGEBYSCORE", userZ, "-inf", now)
+for _, v in ipairs(victims) do
+  redis.call("ZREM", userZ, v)
+  redis.call("DEL", v)
+end
+
+local items = redis.call("ZREVRANGEBYSCORE", userZ, "+inf", now + 1, "LIMIT", 0, 1)
+
+if redis.call("ZCARD", userZ) > 0 then
+  redis.call("EXPIRE", userZ, 3600)
+end
+
+if items and items[1] then
+  return items[1]
+else
+  return ""
+end
+`
+
 // ===== Store =====
 type OnlineStore struct {
 	conf OnlineConfig
 	// 你原有的脚本（保留占位）
 	luaBatch *redis.Script
 	luaHB    *redis.Script
-	// 新增脚本
+	// 既有脚本
 	luaBind             *redis.Script
 	luaSweep            *redis.Script
 	luaOfflineUnauthOne *redis.Script
 	luaOfflineOne       *redis.Script
 	luaLogoutAll        *redis.Script
 	luaSweepAuthed      *redis.Script
+	// 新增脚本
+	luaGetActiveAndSweep *redis.Script
+	luaIsOnline          *redis.Script
+	luaGetNewestActive   *redis.Script
 }
 
 func newOnlineStore(conf OnlineConfig) *OnlineStore {
@@ -173,13 +259,18 @@ func (m *OnlineStore) initExtraScripts() {
 	m.luaOfflineOne = redis.NewScript(luaOfflineOne)
 	m.luaLogoutAll = redis.NewScript(luaLogoutAll)
 	m.luaSweepAuthed = redis.NewScript(luaSweepAuthed)
+
+	// 新增
+	m.luaGetActiveAndSweep = redis.NewScript(luaGetActiveAndSweep)
+	m.luaIsOnline = redis.NewScript(luaIsOnline)
+	m.luaGetNewestActive = redis.NewScript(luaGetNewestActive)
 }
 
 // ===== Key 构造 =====
 
 // 未授权会话键
 // UseClusterTag=true: n:{<node>}:id:<snow>
-// false:              n:<node>:id:<snow>
+// false:              n:%s:id:%s
 func (m *OnlineStore) unauthSessionKey(snowID string) string {
 	if m.conf.UseClusterTag {
 		return fmt.Sprintf("n:{%s}:id:%s", m.conf.NodeID, snowID)
@@ -199,7 +290,7 @@ func (m *OnlineStore) unauthIndexKey() string {
 
 // 已授权会话键
 // UseClusterTag=true: n:{<node>:<user>}:id:<snow>
-// false:              n:<node>:id:<snow>:u:<user>
+// false:              n:%s:id:%s:u:%s
 func (m *OnlineStore) sessionKey(userID, snowID string) string {
 	if m.conf.UseClusterTag {
 		return fmt.Sprintf("n:{%s:%s}:id:%s", m.conf.NodeID, userID, snowID)
@@ -209,7 +300,7 @@ func (m *OnlineStore) sessionKey(userID, snowID string) string {
 
 // 用户索引ZSET（member=会话key, score=expireAtUnix）
 // UseClusterTag=true: nidx:{<node>:<user>}
-// false:              nidx:<node>:u:<user>
+// false:              nidx:%s:u:%s
 func (m *OnlineStore) userIndexKey(userID string) string {
 	if m.conf.UseClusterTag {
 		return fmt.Sprintf("nidx:{%s:%s}", m.conf.NodeID, userID)
@@ -404,6 +495,70 @@ func (m *OnlineStore) SweepAuthedUser(ctx context.Context, userID string, publis
 		_ = redis2.GetRedis().Publish(ctx, m.conf.ChannelName, payload).Err()
 	}
 	return victims, nil
+}
+
+// ===== 新增：查询在线状态 / 拉取会话 =====
+
+// IsOnline：判断用户是否在线，并返回在线会话数量（顺带清理过期）
+func (m *OnlineStore) IsOnline(ctx context.Context, userID string) (online bool, count int64, err error) {
+	zUser := m.userIndexKey(userID)
+	now := time.Now().Unix()
+
+	vals, e := m.luaIsOnline.Run(ctx, redis2.GetRedis(), []string{zUser}, now).Slice()
+	if e != nil {
+		return false, 0, e
+	}
+
+	var flag int64
+	if len(vals) >= 2 {
+		switch v := vals[0].(type) {
+		case int64:
+			flag = v
+		case string:
+			if v == "1" {
+				flag = 1
+			}
+		}
+		switch v := vals[1].(type) {
+		case int64:
+			count = v
+		case string:
+			// 兜底（通常不会返回字符串）
+			if v == "0" {
+				count = 0
+			} else {
+				count = 1
+			}
+		}
+	}
+	return flag == 1, count, nil
+}
+
+// GetActiveSessions：获取用户所有“仍有效”的会话键（顺带清理过期）
+func (m *OnlineStore) GetActiveSessions(ctx context.Context, userID string) ([]string, error) {
+	zUser := m.userIndexKey(userID)
+	now := time.Now().Unix()
+
+	actives, err := m.luaGetActiveAndSweep.Run(ctx, redis2.GetRedis(), []string{zUser}, now).StringSlice()
+	if err != nil {
+		return nil, err
+	}
+	return actives, nil
+}
+
+// GetNewestSession：获取用户最新（过期时间最大）的有效会话键；不存在则返回空串
+func (m *OnlineStore) GetNewestSession(ctx context.Context, userID string) (string, error) {
+	zUser := m.userIndexKey(userID)
+	now := time.Now().Unix()
+
+	newest, err := m.luaGetNewestActive.Run(ctx, redis2.GetRedis(), []string{zUser}, now).Text()
+	if err != nil && err != redis.Nil {
+		return "", err
+	}
+	if newest == "" || newest == "(nil)" {
+		return "", nil
+	}
+	return newest, nil
 }
 
 // ===== 工具 =====
