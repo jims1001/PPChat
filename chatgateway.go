@@ -24,6 +24,7 @@ func main() {
 	global.ConfigRedis()
 	global.ConfigMgo()
 	global.ConfigMiddleware()
+	global.ConfigKafka()
 
 	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
 

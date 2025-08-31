@@ -2,19 +2,27 @@ package main
 
 import (
 	pb "PProject/gen/message"
+	"PProject/global"
 	"PProject/service/chat"
 	"PProject/service/natsx"
 	"PProject/service/rpc"
 	"PProject/service/storage"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"log"
 	"net"
 	"os"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 func main() {
+
+	global.ConfigIds()
+	global.ConfigMgo()
+	global.ConfigRedis()
+	global.ConfigKafka()
+
 	// Initialize the RPC message handling service
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {

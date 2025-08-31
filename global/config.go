@@ -3,11 +3,23 @@ package global
 import (
 	"PProject/data/database/mgo/mongoutil"
 	mid "PProject/middleware"
+	ka "PProject/service/kafka"
 	mgoSrv "PProject/service/mgo"
 	redis "PProject/service/storage/redis"
 	ids "PProject/tools/ids"
 	"context"
+
+	sarama "github.com/Shopify/sarama"
+	"github.com/golang/glog"
 )
+
+func ConfigAll() {
+	ConfigIds()
+	ConfigRedis()
+	ConfigMgo()
+	ConfigKafka()
+
+}
 
 func ConfigIds() {
 	ids.SetNodeID(100)
@@ -55,6 +67,59 @@ func ConfigMgo() {
 		}
 	}()
 
+}
+
+// ConfigKafka 在后台 goroutine 中启动 Kafka Client / Producer / Consumer
+func ConfigKafka() {
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// 1) 生成所有大 Topic 名称
+		topics := ka.GenTopics()
+		glog.Infof("[Kafka] topics=%v", topics)
+
+		// 2) 启动前（可选）创建 Topic
+		if ka.Cfg.AutoCreateTopicsOnStart {
+			adminCfg := ka.BuildBaseConfig()
+			admin, err := sarama.NewClusterAdmin(ka.Cfg.Brokers, adminCfg)
+			if err != nil {
+				glog.Infof("[Kafka][ERR] create admin: %v", err)
+				return
+			}
+			if err := ka.EnsureTopics(admin, topics); err != nil {
+				glog.Infof("[Kafka][ERR] ensure topics: %v", err)
+				_ = admin.Close()
+				return
+			}
+			_ = admin.Close()
+		}
+
+		// 3) 初始化 Client & Producer
+		if err := ka.InitKafkaClient(); err != nil {
+			glog.Infof("[Kafka][ERR] init client: %v", err)
+			return
+		}
+		if err := ka.InitSyncProducerFromClient(); err != nil {
+			glog.Infof("[Kafka][ERR] init producer: %v", err)
+			return
+		}
+
+		// 4) 注册默认 handler
+		ka.RegisterDefaultHandlers(topics)
+
+		// 5) 启动 ConsumerGroup
+		_, err := ka.BootConsumers(topics)
+		if err != nil {
+			return
+		}
+
+		// 6) 阻塞直到 ctx.Done()
+		select {
+		case <-ctx.Done():
+			glog.Infof("[Kafka] context done, shutting down")
+		}
+	}()
 }
 
 func ConfigMiddleware() {

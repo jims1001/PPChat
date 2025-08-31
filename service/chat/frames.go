@@ -163,3 +163,36 @@ func BuildAuthAck(req *pb.MessageFrameData) *pb.MessageFrameData {
 		},
 	}
 }
+
+// BuildSendSuccessAckDeliver 消息发送成功回执消息
+func BuildSendSuccessAckDeliver(toUser string, clientMsgID string, serverMsgID string, req *pb.MessageFrameData) *pb.MessageFrameData {
+	now := time.Now().UnixMilli()
+	return &pb.MessageFrameData{
+		Type:      pb.MessageFrameData_DELIVER, // 4：服务端主动下发
+		From:      "im_server" + req.GatewayId,
+		To:        toUser,
+		Ts:        now,
+		GatewayId: req.GatewayId,
+		ConnId:    req.ConnId,
+		TenantId:  req.TenantId,
+		AppId:     req.AppId,
+		Qos:       pb.MessageFrameData_QOS_AT_LEAST_ONCE,
+		DedupId:   "deliver-" + serverMsgID,
+		Body: &pb.MessageFrameData_Payload{
+			Payload: &pb.MessageData{
+				ClientMsgId:      clientMsgID, // 回显幂等键
+				ServerMsgId:      serverMsgID, // 服务端最终 ID
+				SendTime:         now,
+				SessionType:      int32(pb.SessionType_SINGLE_CHAT),
+				MsgFrom:          int32(pb.MsgFrom_SYSTEM),
+				ContentType:      int32(pb.ContentType_MsgNOTIFICATION), // 401
+				SenderPlatformId: int32(pb.PlatformID_API),
+				SenderNickname:   "System",
+				Status:           0,
+				NotificationElem: &pb.NotificationElem{
+					Detail: `{"ok":true,"message":"Message delivered successfully"}`,
+				},
+			},
+		},
+	}
+}

@@ -1,8 +1,9 @@
 package kafka
 
 import (
-	"github.com/Shopify/sarama"
 	"log"
+
+	"github.com/Shopify/sarama"
 )
 
 var AsyncProd sarama.AsyncProducer

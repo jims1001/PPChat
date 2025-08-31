@@ -2,14 +2,14 @@ package kafka
 
 import "github.com/Shopify/sarama"
 
-var SyncProd sarama.SyncProducer
+var SyncProdLegacy sarama.SyncProducer // 避免与 Producer/SyncProd 冲突
 
-func InitSyncProducerFromClient() error {
+func InitSyncProducerFromClient_Legacy() error {
 	p, err := sarama.NewSyncProducerFromClient(KafkaClient)
 	if err != nil {
 		return err
 	}
-	SyncProd = p
+	SyncProdLegacy = p
 	return nil
 }
 
@@ -18,6 +18,6 @@ func SendSync(topic, value string) error {
 		Topic: topic,
 		Value: sarama.StringEncoder(value),
 	}
-	_, _, err := SyncProd.SendMessage(msg)
+	_, _, err := SyncProd.SendMessage(msg) // 使用 Producer/SyncProd 任一均可
 	return err
 }
