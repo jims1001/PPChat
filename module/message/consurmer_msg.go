@@ -23,8 +23,9 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 			glog.Infof("topic key :%v Replay msg error: %s", topic, err)
 			return err
 		}
+
 	}
-	
+
 	//glog.Infof("[TestTopic] key=%s, value=%s", key, value)
 	return nil
 }

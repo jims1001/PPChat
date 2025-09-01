@@ -17,18 +17,35 @@ import "message/collab.proto";
 message MessageFrameData {
   // 帧类型（保持兼容，同时可继续扩展）
   enum Type {
-    TYPE_UNSPECIFIED = 0;
-    DATA             = 1;  // 业务消息：payload = messageData
-    REGISTER         = 2;  // 上线
-    UNREGISTER       = 3;  // 下线
+    TYPE_UNSPECIFIED = 0; // 未指定（默认）
+
+    // ========= 基础业务帧 =========
+    DATA             = 1;  // 业务消息：payload = MessageData
+    REGISTER         = 2;  // 上线注册
+    UNREGISTER       = 3;  // 下线注销
     DELIVER          = 4;  // 服务端主动下发
-    PING             = 5;  // 心跳
-    MESSAGE_UPDATE   = 6;  // 编辑/版本更新
+    PING             = 5;  // 心跳（客户端->服务端，或服务端保活）
+    MESSAGE_UPDATE   = 6;  // 消息编辑/版本更新
     MESSAGE_ACTION   = 7;  // 协作动作（表单/投票等）
-    SYSTEM_EVENT     = 8;  // 系统事件（转接/强制下线等）
-    AUTH             = 9;  // 授权
-    CONN             = 10; // 连接类型
-   }
+    SYSTEM_EVENT     = 8;  // 系统事件（踢人/转接/禁言等）
+    AUTH             = 9;  // 鉴权/授权
+    CONN             = 10; // 连接信息（连接建立/切换/状态通知）
+
+    // ========= 确认/回执帧 =========
+    ACK              = 11; // 确认消息：发送成功/送达/已读（ack_type区分）
+    NACK             = 12; // 否定确认：写库失败/鉴权失败/风控拒绝等
+
+    // ========= 同步/重传帧 =========
+    SYNC             = 13; // 消息同步：增量/全量拉取、游标对齐
+    RESEND_REQUEST   = 14; // 重传请求：客户端缺包，指定seq/id补发
+
+    // ========= 性能/安全扩展 =========
+    BATCH            = 15; // 批量封装：多帧打包一次传输
+    KEY_UPDATE       = 16; // 会话密钥/加密元数据更新
+
+    // ========= 状态/存在性 =========
+    PRESENCE         = 17; // 在线状态/输入状态/活动状态更新
+  }
 
   // 传输服务质量
   enum QoS {

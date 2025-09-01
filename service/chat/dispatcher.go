@@ -3,6 +3,8 @@ package chat
 import (
 	pb "PProject/gen/message"
 	"fmt"
+
+	"github.com/golang/glog"
 )
 
 type Dispatcher struct {
@@ -21,4 +23,14 @@ func (d *Dispatcher) Dispatch(ctx *Context, f *pb.MessageFrameData, conn *WsConn
 		return fmt.Errorf("no handler for type=%v", f.GetType())
 	}
 	return h.Handle(ctx, f, conn)
+}
+
+func (d *Dispatcher) GetHandler(types pb.MessageFrameData_Type) Handler {
+
+	h, ok := d.handlers[types]
+	if !ok {
+		glog.Infof("no handler for type=%v", types)
+		return nil
+	}
+	return h
 }

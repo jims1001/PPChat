@@ -6,7 +6,9 @@ import (
 
 type Handler interface {
 	Type() pb.MessageFrameData_Type
+	Run() // 添加运行时
 	Handle(*Context, *pb.MessageFrameData, *WsConn) error
+	IsHandler() bool // 是否需要处理
 }
 
 type Context struct {

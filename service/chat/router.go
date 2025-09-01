@@ -73,6 +73,18 @@ func (s *Server) ConnMgr() *ConnManager {
 	return s.connMgr
 }
 
+func (s *Server) GetHandler(types pb.MessageFrameData_Type) Handler {
+	return nil
+}
+
+func (s *Server) Disp() *Dispatcher {
+	return s.disp
+}
+
+func (s *Server) SetMsgHandler(handler ka.ProducerHandler) {
+	s.msgHandler = handler
+}
+
 func (s *Server) registerHandlers() {
 	//ctx := &Context{S: s}
 	//s.disp.Register(NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
@@ -95,6 +107,7 @@ func (s *Server) RunToRouter() {
 	s.LoopAuth(ctx)
 	s.LoopData(ctx)
 	s.LoopRelayData(ctx)
+	s.LoopAckData(ctx)
 
 	for {
 		if err := s.loopRouter(); err != nil {
@@ -356,7 +369,72 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", connID, err)
 					continue
 				}
-			
+
+				// 发送（带写超时）
+				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
+					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					// 发送失败：关闭并从管理器移除，防止死连接占用资源
+					_ = ws.Close()
+					s.connMgr.Remove(connID)
+					continue
+				}
+			}
+		}
+	}()
+}
+
+func (s *Server) LoopAckData(ctx context.Context) {
+
+	go func() {
+		// defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[loopConnect] panic recovered: %v", r)
+			}
+		}()
+
+		outCh := s.AckBound() // <-chan *pb.MessageFrameData
+
+		marshaller := protojson.MarshalOptions{
+			Indent:          "",    // 美化输出
+			UseEnumNumbers:  true,  // 枚举用数字
+			EmitUnpopulated: false, // 建议调成 true，客户端好解析
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[LoopRelayData 数据处理] ctx done: %v", ctx.Err())
+				return
+
+			case msg, ok := <-outCh:
+				if !ok {
+					log.Printf("[LoopRelayData 数据处理] 数据处理通道已经关闭")
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				connID := msg.GetConnId()
+				if connID == "" {
+					log.Printf("[LoopRelayData 数据处理] 没有获取到连接 conn_id, trace_id=%s type=%v", msg.GetTraceId(), msg.GetType())
+					continue
+				}
+
+				ws, res := s.connMgr.Get(msg.To)
+				if !res {
+					log.Printf("[数据处理] 获取到有效的客户端   error: %v", res)
+					continue
+				}
+				ackMsg := BuildSendSuccessAckDeliver(msg.To,
+					msg.GetPayload().ClientMsgId, msg.GetPayload().ServerMsgId, msg)
+				// 序列化（一次性）
+				data, err := marshaller.Marshal(ackMsg)
+				if err != nil {
+					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", connID, err)
+					continue
+				}
+
 				// 发送（带写超时）
 				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
 					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
@@ -458,6 +536,19 @@ func RelayMsg(msgData []byte) error {
 	return nil
 }
 
+func AckMsg(msg []byte) error {
+	msgObj, err := ParseFrameJSON(msg)
+	if err != nil {
+		return err
+	}
+	wsAckBound <- msgObj
+	return nil
+}
+
+func (s *Server) AckBound() chan *pb.MessageFrameData {
+	return wsAckBound
+}
+
 // WsOutbound package-scope channel shared with ws_server.go for simplicity
 var WsOutbound = make(chan *pb.MessageFrame, 8192)
 
@@ -469,3 +560,5 @@ var WsAuthChannel = make(chan *WSConnectionMsg, 8192)
 var WsDataChannel = make(chan *WSConnectionMsg, 8192)
 
 var WsRelayBound = make(chan *pb.MessageFrameData, 8192)
+
+var wsAckBound = make(chan *pb.MessageFrameData, 8192)

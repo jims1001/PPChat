@@ -17,6 +17,24 @@ import (
 
 var upgraded = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: func(r *http.Request) bool { return true }}
 
+func (s *Server) HandleWSV2(c *gin.Context) {
+
+	ws, err := upgraded.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		// 常见：非 WebSocket 请求/握手失败
+		return
+	}
+	defer func(ws *websocket.Conn) {
+		err := ws.Close()
+		if err != nil {
+			glog.Infof("[HandleWSV2] close websocket error: %v", err)
+		}
+	}(ws)
+
+	// 构造连接的消息
+
+}
+
 // HandleWS ===== WebSocket 处理（修正版） =====
 func (s *Server) HandleWS(c *gin.Context) {
 

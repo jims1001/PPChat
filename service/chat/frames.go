@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -19,6 +20,17 @@ func ParseFrameJSON(raw []byte) (*pb.MessageFrameData, error) {
 		return nil, fmt.Errorf("unmarshal frame failed: %w", err)
 	}
 	return frame, nil
+}
+
+// WriteJSONWithDeadline 封装一个带写超时的发送，避免并发写/阻塞。
+// 注意：gorilla/websocket 的 WriteMessage 不能并发调用，
+// 如果上层可能多处写，请为每个连接做“单写协程 + 缓冲队列”的写泵模型。
+func WriteJSONWithDeadline(ws *websocket.Conn, jsonBytes []byte, d time.Duration) error {
+	if ws == nil {
+		return fmt.Errorf("nil websocket")
+	}
+	_ = ws.SetWriteDeadline(time.Now().Add(d))
+	return ws.WriteMessage(websocket.TextMessage, jsonBytes)
 }
 
 type AuthPayload struct {
@@ -193,6 +205,22 @@ func BuildSendSuccessAckDeliver(toUser string, clientMsgID string, serverMsgID s
 					Detail: `{"ok":true,"msg":"Message delivered successfully"}`,
 				},
 			},
+		},
+	}
+}
+
+func BuildPing(connID, gatewayID, sessionID, nodeID string) *pb.MessageFrameData {
+	now := time.Now().UnixMilli()
+	return &pb.MessageFrameData{
+		Type:      pb.MessageFrameData_PING, // 帧类型改为 PING
+		Ts:        now,                      // 当前毫秒时间戳
+		GatewayId: gatewayID,                // 网关节点 ID
+		ConnId:    connID,                   // 当前连接 ID
+		SessionId: sessionID,                // 会话 ID
+		Meta: map[string]string{ // 附加信息
+			"node_id":          nodeID,
+			"ping_interval_ms": "25000", // 建议客户端心跳间隔
+			"pong_timeout_ms":  "75000", // 建议超时时间
 		},
 	}
 }
