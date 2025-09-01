@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/security.proto
+// source: msg/security.proto
 
 package messagepb
 
@@ -207,9 +207,9 @@ func file_message_security_proto_rawDescGZIP() []byte {
 
 var file_message_security_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_message_security_proto_goTypes = []any{
-	(HashAlg)(0), // 0: message.v1.HashAlg
-	(SigAlg)(0),  // 1: message.v1.SigAlg
-	(EncAlg)(0),  // 2: message.v1.EncAlg
+	(HashAlg)(0), // 0: msg.v1.HashAlg
+	(SigAlg)(0),  // 1: msg.v1.SigAlg
+	(EncAlg)(0),  // 2: msg.v1.EncAlg
 }
 var file_message_security_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

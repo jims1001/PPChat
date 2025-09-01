@@ -32,7 +32,7 @@ func TestSendKafkaMessage(t *testing.T) {
 
 	brokers := []string{"localhost:9092"}
 	topic := "test-topic"
-	message := "send kafka system message"
+	message := "send kafka system msg"
 
 	if err := InitKafkaClient(brokers); err != nil {
 		t.Fatalf("InitKafkaClient failed: %v", err)
@@ -80,6 +80,6 @@ func TestKafkaConsumerGroup(t *testing.T) {
 	case <-waitChan:
 		t.Log("All messages received and processed")
 	case <-time.After(10 * time.Second):
-		t.Log("Timeout waiting for message handlers")
+		t.Log("Timeout waiting for msg handlers")
 	}
 }

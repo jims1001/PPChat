@@ -16,7 +16,7 @@ type Config struct {
 	Target              string        // gRPC service address
 	DialTimeout         time.Duration // connection timeout
 	HealthCheckInterval time.Duration // health check interval
-	PingInterval        time.Duration // PING message interval
+	PingInterval        time.Duration // PING msg interval
 }
 
 type Manager struct {

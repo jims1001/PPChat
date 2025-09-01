@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/collab.proto
+// source: msg/collab.proto
 
 package messagepb
 
@@ -158,13 +158,13 @@ type ActionEnvelope struct {
 	Version int64 `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`                // 目标对象的期望版本（乐观锁），服务端可返回冲突
 	SeqHint int64 `protobuf:"varint,15,opt,name=seq_hint,json=seqHint,proto3" json:"seq_hint,omitempty"` // 客户端侧临时序号提示（网关可忽略）
 	// —— 路由/观测 —— //
-	Kind    ActionKind `protobuf:"varint,16,opt,name=kind,proto3,enum=message.v1.ActionKind" json:"kind,omitempty"` // 粗粒度类别（可选，便于观测）
+	Kind    ActionKind `protobuf:"varint,16,opt,name=kind,proto3,enum=msg.v1.ActionKind" json:"kind,omitempty"` // 粗粒度类别（可选，便于观测）
 	TypeUrl string     `protobuf:"bytes,17,opt,name=type_url,json=typeUrl,proto3" json:"type_url,omitempty"`        // Any 的类型URL（冗余写入，便于直观路由与调试）
 	// —— 负载（动态扩展的关键） —— //
 	//
-	//	约定：payload 的具体 message 通过 type_url 唯一标识，
+	//	约定：payload 的具体 msg 通过 type_url 唯一标识，
 	//	如 "type.openim/vote.VoteActionV1" 或 "type.openim/form.FormSubmitV1"
-	Payload *anypb.Any `protobuf:"bytes,18,opt,name=payload,proto3" json:"payload,omitempty"` // 动作内容（任意 message）
+	Payload *anypb.Any `protobuf:"bytes,18,opt,name=payload,proto3" json:"payload,omitempty"` // 动作内容（任意 msg）
 	// —— 可选：协作编辑/增量（JSON Patch 或 CRDT 操作） —— //
 	Delta *DeltaOp `protobuf:"bytes,19,opt,name=delta,proto3" json:"delta,omitempty"`
 	// —— 标签与扩展 —— //
@@ -400,7 +400,7 @@ type DeltaOp struct {
 	unknownFields protoimpl.UnknownFields
 
 	DocId       string         `protobuf:"bytes,1,opt,name=doc_id,json=docId,proto3" json:"doc_id,omitempty"`                      // 文档/白板/数据对象ID
-	Format      DeltaOp_Format `protobuf:"varint,2,opt,name=format,proto3,enum=message.v1.DeltaOp_Format" json:"format,omitempty"` // 增量格式
+	Format      DeltaOp_Format `protobuf:"varint,2,opt,name=format,proto3,enum=msg.v1.DeltaOp_Format" json:"format,omitempty"` // 增量格式
 	JsonPatch   string         `protobuf:"bytes,3,opt,name=json_patch,json=jsonPatch,proto3" json:"json_patch,omitempty"`          // JSON Patch 字符串（当 format=JSON_PATCH）
 	CrdtBlob    []byte         `protobuf:"bytes,4,opt,name=crdt_blob,json=crdtBlob,proto3" json:"crdt_blob,omitempty"`             // CRDT 二进制（当 format=CRDT）
 	BaseVersion int64          `protobuf:"varint,5,opt,name=base_version,json=baseVersion,proto3" json:"base_version,omitempty"`   // 基线版本（便于冲突检测/合并）
@@ -569,7 +569,7 @@ type ActionError struct {
 
 	CorrelationId string `protobuf:"bytes,1,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
 	Code          string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`       // "CONFLICT" / "FORBIDDEN" / "INVALID" / ...
-	Message       string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"` // 错误描述
+	Message       string `protobuf:"bytes,3,opt,name=msg,proto3" json:"msg,omitempty"` // 错误描述
 	Detail        string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`   // 细节
 	ServerTime    int64  `protobuf:"varint,5,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`
 	// 可选：返回当前服务端视角的状态片段（例如服务端版本、已存在的选择等）
@@ -656,7 +656,7 @@ type ActionSubscribe struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Kinds       []ActionKind `protobuf:"varint,1,rep,packed,name=kinds,proto3,enum=message.v1.ActionKind" json:"kinds,omitempty"` // 订阅某些类别
+	Kinds       []ActionKind `protobuf:"varint,1,rep,packed,name=kinds,proto3,enum=msg.v1.ActionKind" json:"kinds,omitempty"` // 订阅某些类别
 	TypeUrls    []string     `protobuf:"bytes,2,rep,name=type_urls,json=typeUrls,proto3" json:"type_urls,omitempty"`              // 精确订阅某些 Any 类型
 	GuildIds    []string     `protobuf:"bytes,3,rep,name=guild_ids,json=guildIds,proto3" json:"guild_ids,omitempty"`
 	ChannelIds  []string     `protobuf:"bytes,4,rep,name=channel_ids,json=channelIds,proto3" json:"channel_ids,omitempty"`
@@ -1408,38 +1408,38 @@ func file_message_collab_proto_rawDescGZIP() []byte {
 var file_message_collab_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_message_collab_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_message_collab_proto_goTypes = []any{
-	(ActionKind)(0),         // 0: message.v1.ActionKind
-	(DeltaOp_Format)(0),     // 1: message.v1.DeltaOp.Format
-	(*ActionEnvelope)(nil),  // 2: message.v1.ActionEnvelope
-	(*DeltaOp)(nil),         // 3: message.v1.DeltaOp
-	(*ActionAck)(nil),       // 4: message.v1.ActionAck
-	(*ActionError)(nil),     // 5: message.v1.ActionError
-	(*ActionSubscribe)(nil), // 6: message.v1.ActionSubscribe
-	(*VoteActionV1)(nil),    // 7: message.v1.VoteActionV1
-	(*FormSubmitV1)(nil),    // 8: message.v1.FormSubmitV1
-	(*FormFieldKV)(nil),     // 9: message.v1.FormFieldKV
-	(*TaskUpdateV1)(nil),    // 10: message.v1.TaskUpdateV1
-	(*DocEditV1)(nil),       // 11: message.v1.DocEditV1
-	(*CoopAction)(nil),      // 12: message.v1.CoopAction
-	nil,                     // 13: message.v1.ActionEnvelope.MetaEntry
-	nil,                     // 14: message.v1.TaskUpdateV1.FieldsEntry
+	(ActionKind)(0),         // 0: msg.v1.ActionKind
+	(DeltaOp_Format)(0),     // 1: msg.v1.DeltaOp.Format
+	(*ActionEnvelope)(nil),  // 2: msg.v1.ActionEnvelope
+	(*DeltaOp)(nil),         // 3: msg.v1.DeltaOp
+	(*ActionAck)(nil),       // 4: msg.v1.ActionAck
+	(*ActionError)(nil),     // 5: msg.v1.ActionError
+	(*ActionSubscribe)(nil), // 6: msg.v1.ActionSubscribe
+	(*VoteActionV1)(nil),    // 7: msg.v1.VoteActionV1
+	(*FormSubmitV1)(nil),    // 8: msg.v1.FormSubmitV1
+	(*FormFieldKV)(nil),     // 9: msg.v1.FormFieldKV
+	(*TaskUpdateV1)(nil),    // 10: msg.v1.TaskUpdateV1
+	(*DocEditV1)(nil),       // 11: msg.v1.DocEditV1
+	(*CoopAction)(nil),      // 12: msg.v1.CoopAction
+	nil,                     // 13: msg.v1.ActionEnvelope.MetaEntry
+	nil,                     // 14: msg.v1.TaskUpdateV1.FieldsEntry
 	(*anypb.Any)(nil),       // 15: google.protobuf.Any
 }
 var file_message_collab_proto_depIdxs = []int32{
-	0,  // 0: message.v1.ActionEnvelope.kind:type_name -> message.v1.ActionKind
-	15, // 1: message.v1.ActionEnvelope.payload:type_name -> google.protobuf.Any
-	3,  // 2: message.v1.ActionEnvelope.delta:type_name -> message.v1.DeltaOp
-	13, // 3: message.v1.ActionEnvelope.meta:type_name -> message.v1.ActionEnvelope.MetaEntry
-	1,  // 4: message.v1.DeltaOp.format:type_name -> message.v1.DeltaOp.Format
-	15, // 5: message.v1.ActionError.server_view:type_name -> google.protobuf.Any
-	0,  // 6: message.v1.ActionSubscribe.kinds:type_name -> message.v1.ActionKind
-	9,  // 7: message.v1.FormSubmitV1.fields:type_name -> message.v1.FormFieldKV
-	14, // 8: message.v1.TaskUpdateV1.fields:type_name -> message.v1.TaskUpdateV1.FieldsEntry
-	3,  // 9: message.v1.DocEditV1.delta:type_name -> message.v1.DeltaOp
-	7,  // 10: message.v1.CoopAction.vote_action:type_name -> message.v1.VoteActionV1
-	8,  // 11: message.v1.CoopAction.form_submit:type_name -> message.v1.FormSubmitV1
-	10, // 12: message.v1.CoopAction.task_update:type_name -> message.v1.TaskUpdateV1
-	11, // 13: message.v1.CoopAction.doc_edit:type_name -> message.v1.DocEditV1
+	0,  // 0: msg.v1.ActionEnvelope.kind:type_name -> msg.v1.ActionKind
+	15, // 1: msg.v1.ActionEnvelope.payload:type_name -> google.protobuf.Any
+	3,  // 2: msg.v1.ActionEnvelope.delta:type_name -> msg.v1.DeltaOp
+	13, // 3: msg.v1.ActionEnvelope.meta:type_name -> msg.v1.ActionEnvelope.MetaEntry
+	1,  // 4: msg.v1.DeltaOp.format:type_name -> msg.v1.DeltaOp.Format
+	15, // 5: msg.v1.ActionError.server_view:type_name -> google.protobuf.Any
+	0,  // 6: msg.v1.ActionSubscribe.kinds:type_name -> msg.v1.ActionKind
+	9,  // 7: msg.v1.FormSubmitV1.fields:type_name -> msg.v1.FormFieldKV
+	14, // 8: msg.v1.TaskUpdateV1.fields:type_name -> msg.v1.TaskUpdateV1.FieldsEntry
+	3,  // 9: msg.v1.DocEditV1.delta:type_name -> msg.v1.DeltaOp
+	7,  // 10: msg.v1.CoopAction.vote_action:type_name -> msg.v1.VoteActionV1
+	8,  // 11: msg.v1.CoopAction.form_submit:type_name -> msg.v1.FormSubmitV1
+	10, // 12: msg.v1.CoopAction.task_update:type_name -> msg.v1.TaskUpdateV1
+	11, // 13: msg.v1.CoopAction.doc_edit:type_name -> msg.v1.DocEditV1
 	14, // [14:14] is the sub-list for method output_type
 	14, // [14:14] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name

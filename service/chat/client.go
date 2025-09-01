@@ -12,5 +12,5 @@ type Client struct {
 	ConnID string          // Unique connection ID (unique within the local gateway)
 	UserID string          // User ID (determined after authentication)
 	WS     *websocket.Conn // WebSocket connection object
-	Send   chan []byte     // Outbound message queue (consumed by a single writer goroutine)
+	Send   chan []byte     // Outbound msg queue (consumed by a single writer goroutine)
 }

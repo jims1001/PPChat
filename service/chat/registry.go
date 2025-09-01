@@ -14,20 +14,20 @@ type conn struct {
 
 }
 
-type registry struct {
+type Registry struct {
 	mu     sync.RWMutex
 	byUser map[string]map[string]*conn // user -> conn_id -> conn
 	byConn map[string]*conn            // conn_id -> conn
 }
 
-func newRegistry() *registry {
-	return &registry{
+func NewRegistry() *Registry {
+	return &Registry{
 		byUser: make(map[string]map[string]*conn),
 		byConn: make(map[string]*conn),
 	}
 }
 
-func (r *registry) add(c *conn) {
+func (r *Registry) add(c *conn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	// user 索引
@@ -41,7 +41,7 @@ func (r *registry) add(c *conn) {
 	r.byConn[c.id] = c
 }
 
-func (r *registry) remove(c *conn) {
+func (r *Registry) remove(c *conn) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if m := r.byUser[c.sessionId]; m != nil {
@@ -53,7 +53,7 @@ func (r *registry) remove(c *conn) {
 	delete(r.byConn, c.id)
 }
 
-func (r *registry) listByUser(user string) []*conn {
+func (r *Registry) listByUser(user string) []*conn {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	m := r.byUser[user]
@@ -67,14 +67,14 @@ func (r *registry) listByUser(user string) []*conn {
 	return out
 }
 
-func (r *registry) getByConnID(connID string) *conn {
+func (r *Registry) getByConnID(connID string) *conn {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.byConn[connID]
 }
 
 // Optional: iterate through all connections (use sparingly, for debugging/statistics)
-func (r *registry) listAll() []*conn {
+func (r *Registry) listAll() []*conn {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*conn, 0, len(r.byConn))

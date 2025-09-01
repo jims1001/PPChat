@@ -83,7 +83,7 @@ type MessageFrame struct {
 	Type      MessageFrame_Type `protobuf:"varint,1,opt,name=type,proto3,enum=router.MessageFrame_Type" json:"type,omitempty"`
 	From      string            `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`                            // user_id of sender (for REGISTER it is the user being registered)
 	To        string            `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`                                // target user_id (for DATA/DELIVER)
-	Payload   []byte            `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`                      // raw message bytes from client
+	Payload   []byte            `protobuf:"bytes,4,opt,name=payload,proto3" json:"payload,omitempty"`                      // raw msg bytes from client
 	GatewayId string            `protobuf:"bytes,5,opt,name=gateway_id,json=gatewayId,proto3" json:"gateway_id,omitempty"` // which gateway this frame comes from / should be delivered to
 	ConnId    string            `protobuf:"bytes,6,opt,name=conn_id,json=connId,proto3" json:"conn_id,omitempty"`          // connection ID at gateway (optional)
 	Ts        int64             `protobuf:"varint,7,opt,name=ts,proto3" json:"ts,omitempty"`                               // unix ms

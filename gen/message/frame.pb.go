@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/frame.proto
+// source: msg/frame.proto
 
 package messagepb
 
@@ -209,7 +209,7 @@ type MessageFrameData struct {
 	unknownFields protoimpl.UnknownFields
 
 	// —— 必要头字段 —— //
-	Type      MessageFrameData_Type `protobuf:"varint,1,opt,name=type,proto3,enum=message.v1.MessageFrameData_Type" json:"type,omitempty"` // 帧类型
+	Type      MessageFrameData_Type `protobuf:"varint,1,opt,name=type,proto3,enum=msg.v1.MessageFrameData_Type" json:"type,omitempty"` // 帧类型
 	From      string                `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`                                        // 发送方（建议由网关注入）
 	To        string                `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`                                            // 接收方 userID/groupID
 	Ts        int64                 `protobuf:"varint,4,opt,name=ts,proto3" json:"ts,omitempty"`                                           // 发送毫秒时间戳
@@ -218,8 +218,8 @@ type MessageFrameData struct {
 	TenantId  string                `protobuf:"bytes,7,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`                // 多租户隔离
 	AppId     string                `protobuf:"bytes,8,opt,name=app_id,json=appId,proto3" json:"app_id,omitempty"`                         // 应用/业务ID
 	// —— 传输策略/风控 —— //
-	Qos         MessageFrameData_QoS      `protobuf:"varint,10,opt,name=qos,proto3,enum=message.v1.MessageFrameData_QoS" json:"qos,omitempty"`                // 传输QoS
-	Priority    MessageFrameData_Priority `protobuf:"varint,11,opt,name=priority,proto3,enum=message.v1.MessageFrameData_Priority" json:"priority,omitempty"` // 优先级
+	Qos         MessageFrameData_QoS      `protobuf:"varint,10,opt,name=qos,proto3,enum=msg.v1.MessageFrameData_QoS" json:"qos,omitempty"`                // 传输QoS
+	Priority    MessageFrameData_Priority `protobuf:"varint,11,opt,name=priority,proto3,enum=msg.v1.MessageFrameData_Priority" json:"priority,omitempty"` // 优先级
 	AckRequired bool                      `protobuf:"varint,12,opt,name=ack_required,json=ackRequired,proto3" json:"ack_required,omitempty"`                  // 是否需要ACK
 	AckId       string                    `protobuf:"bytes,13,opt,name=ack_id,json=ackId,proto3" json:"ack_id,omitempty"`                                     // ACK对应ID
 	DedupId     string                    `protobuf:"bytes,14,opt,name=dedup_id,json=dedupId,proto3" json:"dedup_id,omitempty"`                               // 幂等ID（去重窗口唯一）
@@ -242,13 +242,13 @@ type MessageFrameData struct {
 	//	*MessageFrameData_EncryptedPayload
 	Body isMessageFrameData_Body `protobuf_oneof:"body"`
 	// —— 完整性&签名（可选，先不启用也不影响） —— //
-	HashAlg     HashAlg `protobuf:"varint,40,opt,name=hash_alg,json=hashAlg,proto3,enum=message.v1.HashAlg" json:"hash_alg,omitempty"`
+	HashAlg     HashAlg `protobuf:"varint,40,opt,name=hash_alg,json=hashAlg,proto3,enum=msg.v1.HashAlg" json:"hash_alg,omitempty"`
 	PayloadHash []byte  `protobuf:"bytes,41,opt,name=payload_hash,json=payloadHash,proto3" json:"payload_hash,omitempty"` // 对 body 做 hash（规范化序列化后）
-	SigAlg      SigAlg  `protobuf:"varint,42,opt,name=sig_alg,json=sigAlg,proto3,enum=message.v1.SigAlg" json:"sig_alg,omitempty"`
+	SigAlg      SigAlg  `protobuf:"varint,42,opt,name=sig_alg,json=sigAlg,proto3,enum=msg.v1.SigAlg" json:"sig_alg,omitempty"`
 	KeyId       string  `protobuf:"bytes,43,opt,name=key_id,json=keyId,proto3" json:"key_id,omitempty"` // 用于查找公钥
 	Signature   []byte  `protobuf:"bytes,44,opt,name=signature,proto3" json:"signature,omitempty"`      // 对 (header+hash) 做签名
 	// —— 加密头（预留；encrypted_payload 使用时启用） —— //
-	EncAlg          EncAlg `protobuf:"varint,50,opt,name=enc_alg,json=encAlg,proto3,enum=message.v1.EncAlg" json:"enc_alg,omitempty"`
+	EncAlg          EncAlg `protobuf:"varint,50,opt,name=enc_alg,json=encAlg,proto3,enum=msg.v1.EncAlg" json:"enc_alg,omitempty"`
 	EncKeyId        string `protobuf:"bytes,51,opt,name=enc_key_id,json=encKeyId,proto3" json:"enc_key_id,omitempty"`
 	EncEphemeralPub []byte `protobuf:"bytes,52,opt,name=enc_ephemeral_pub,json=encEphemeralPub,proto3" json:"enc_ephemeral_pub,omitempty"` // 例如X25519短期公钥
 	EncNonce        []byte `protobuf:"bytes,53,opt,name=enc_nonce,json=encNonce,proto3" json:"enc_nonce,omitempty"`
@@ -784,35 +784,35 @@ func file_message_frame_proto_rawDescGZIP() []byte {
 var file_message_frame_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_message_frame_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_message_frame_proto_goTypes = []any{
-	(MessageFrameData_Type)(0),     // 0: message.v1.MessageFrameData.Type
-	(MessageFrameData_QoS)(0),      // 1: message.v1.MessageFrameData.QoS
-	(MessageFrameData_Priority)(0), // 2: message.v1.MessageFrameData.Priority
-	(*MessageFrameData)(nil),       // 3: message.v1.MessageFrameData
-	nil,                            // 4: message.v1.MessageFrameData.MetaEntry
-	(*MessageData)(nil),            // 5: message.v1.MessageData
+	(MessageFrameData_Type)(0),     // 0: msg.v1.MessageFrameData.Type
+	(MessageFrameData_QoS)(0),      // 1: msg.v1.MessageFrameData.QoS
+	(MessageFrameData_Priority)(0), // 2: msg.v1.MessageFrameData.Priority
+	(*MessageFrameData)(nil),       // 3: msg.v1.MessageFrameData
+	nil,                            // 4: msg.v1.MessageFrameData.MetaEntry
+	(*MessageData)(nil),            // 5: msg.v1.MessageData
 	(*anypb.Any)(nil),              // 6: google.protobuf.Any
-	(HashAlg)(0),                   // 7: message.v1.HashAlg
-	(SigAlg)(0),                    // 8: message.v1.SigAlg
-	(EncAlg)(0),                    // 9: message.v1.EncAlg
-	(*ShardInfo)(nil),              // 10: message.v1.ShardInfo
-	(*RateHint)(nil),               // 11: message.v1.RateHint
-	(*CoopAction)(nil),             // 12: message.v1.CoopAction
-	(*SystemEvent)(nil),            // 13: message.v1.SystemEvent
+	(HashAlg)(0),                   // 7: msg.v1.HashAlg
+	(SigAlg)(0),                    // 8: msg.v1.SigAlg
+	(EncAlg)(0),                    // 9: msg.v1.EncAlg
+	(*ShardInfo)(nil),              // 10: msg.v1.ShardInfo
+	(*RateHint)(nil),               // 11: msg.v1.RateHint
+	(*CoopAction)(nil),             // 12: msg.v1.CoopAction
+	(*SystemEvent)(nil),            // 13: msg.v1.SystemEvent
 }
 var file_message_frame_proto_depIdxs = []int32{
-	0,  // 0: message.v1.MessageFrameData.type:type_name -> message.v1.MessageFrameData.Type
-	1,  // 1: message.v1.MessageFrameData.qos:type_name -> message.v1.MessageFrameData.QoS
-	2,  // 2: message.v1.MessageFrameData.priority:type_name -> message.v1.MessageFrameData.Priority
-	4,  // 3: message.v1.MessageFrameData.meta:type_name -> message.v1.MessageFrameData.MetaEntry
-	5,  // 4: message.v1.MessageFrameData.payload:type_name -> message.v1.MessageData
-	6,  // 5: message.v1.MessageFrameData.any_payload:type_name -> google.protobuf.Any
-	7,  // 6: message.v1.MessageFrameData.hash_alg:type_name -> message.v1.HashAlg
-	8,  // 7: message.v1.MessageFrameData.sig_alg:type_name -> message.v1.SigAlg
-	9,  // 8: message.v1.MessageFrameData.enc_alg:type_name -> message.v1.EncAlg
-	10, // 9: message.v1.MessageFrameData.shard:type_name -> message.v1.ShardInfo
-	11, // 10: message.v1.MessageFrameData.rate:type_name -> message.v1.RateHint
-	12, // 11: message.v1.MessageFrameData.coop_action:type_name -> message.v1.CoopAction
-	13, // 12: message.v1.MessageFrameData.system_event:type_name -> message.v1.SystemEvent
+	0,  // 0: msg.v1.MessageFrameData.type:type_name -> msg.v1.MessageFrameData.Type
+	1,  // 1: msg.v1.MessageFrameData.qos:type_name -> msg.v1.MessageFrameData.QoS
+	2,  // 2: msg.v1.MessageFrameData.priority:type_name -> msg.v1.MessageFrameData.Priority
+	4,  // 3: msg.v1.MessageFrameData.meta:type_name -> msg.v1.MessageFrameData.MetaEntry
+	5,  // 4: msg.v1.MessageFrameData.payload:type_name -> msg.v1.MessageData
+	6,  // 5: msg.v1.MessageFrameData.any_payload:type_name -> google.protobuf.Any
+	7,  // 6: msg.v1.MessageFrameData.hash_alg:type_name -> msg.v1.HashAlg
+	8,  // 7: msg.v1.MessageFrameData.sig_alg:type_name -> msg.v1.SigAlg
+	9,  // 8: msg.v1.MessageFrameData.enc_alg:type_name -> msg.v1.EncAlg
+	10, // 9: msg.v1.MessageFrameData.shard:type_name -> msg.v1.ShardInfo
+	11, // 10: msg.v1.MessageFrameData.rate:type_name -> msg.v1.RateHint
+	12, // 11: msg.v1.MessageFrameData.coop_action:type_name -> msg.v1.CoopAction
+	13, // 12: msg.v1.MessageFrameData.system_event:type_name -> msg.v1.SystemEvent
 	13, // [13:13] is the sub-list for method output_type
 	13, // [13:13] is the sub-list for method input_type
 	13, // [13:13] is the sub-list for extension type_name

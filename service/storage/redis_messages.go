@@ -33,7 +33,7 @@ type OfflineMsg struct {
 
 func offlineKey(user string) string { return "im:offline:" + user }
 
-// EnqueueOffline stores a message into the user's offline queue
+// EnqueueOffline stores a msg into the user's offline queue
 func EnqueueOffline(user, from string, payload []byte) error {
 	if rdb == nil {
 		return fmt.Errorf("redis not initialized")

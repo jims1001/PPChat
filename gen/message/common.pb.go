@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/common.proto
+// source: msg/common.proto
 
 package messagepb
 
@@ -97,7 +97,7 @@ type AckData struct {
 	AckId         string `protobuf:"bytes,1,opt,name=ack_id,json=ackId,proto3" json:"ack_id,omitempty"`                         // 对应请求携带的 ack_id 或由服务端生成
 	Ok            bool   `protobuf:"varint,2,opt,name=ok,proto3" json:"ok,omitempty"`                                           // 是否成功
 	Code          string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`                                        // 错误/结果码（如 OK/CONFLICT/FORBIDDEN/INVALID/RATE_LIMIT）
-	Message       string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`                                  // 人类可读信息
+	Message       string `protobuf:"bytes,4,opt,name=msg,proto3" json:"msg,omitempty"`                                  // 人类可读信息
 	ServerTime    int64  `protobuf:"varint,5,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`         // 服务器时间（ms）
 	CorrelationId string `protobuf:"bytes,6,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"` // 关联ID（用于串联请求/回执/日志）
 }
@@ -349,10 +349,10 @@ func file_message_common_proto_rawDescGZIP() []byte {
 var file_message_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_message_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_message_common_proto_goTypes = []any{
-	(ErrorCode)(0),   // 0: message.v1.ErrorCode
-	(*AckData)(nil),  // 1: message.v1.AckData
-	(*Page)(nil),     // 2: message.v1.Page
-	(*PageResp)(nil), // 3: message.v1.PageResp
+	(ErrorCode)(0),   // 0: msg.v1.ErrorCode
+	(*AckData)(nil),  // 1: msg.v1.AckData
+	(*Page)(nil),     // 2: msg.v1.Page
+	(*PageResp)(nil), // 3: msg.v1.PageResp
 }
 var file_message_common_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

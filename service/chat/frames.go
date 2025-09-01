@@ -190,7 +190,7 @@ func BuildSendSuccessAckDeliver(toUser string, clientMsgID string, serverMsgID s
 				SenderNickname:   "System",
 				Status:           0,
 				NotificationElem: &pb.NotificationElem{
-					Detail: `{"ok":true,"message":"Message delivered successfully"}`,
+					Detail: `{"ok":true,"msg":"Message delivered successfully"}`,
 				},
 			},
 		},

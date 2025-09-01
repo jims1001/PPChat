@@ -2,7 +2,6 @@ package chat
 
 import (
 	pb "PProject/gen/gateway"
-
 	"context"
 	"time"
 )
@@ -35,7 +34,7 @@ func (c *MsgGatewayService) Send(ctx context.Context, in *pb.SendMessageFrame) (
 
 	//fmt.Printf("get payload: %s\n", string(in.Payload))
 
-	// send message
+	// send msg
 	err := c.conn.Send(in.To, []byte(string(in.Payload)+"1"))
 	if err != nil {
 		return nil, err

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package router;
-option go_package = "/message;Message";
+option go_package = "/msg;Message";
 
 message MessageFrameDataMessageFrame {
   enum Type { DATA = 0; REGISTER = 1; UNREGISTER = 2; DELIVER = 3; PING = 4; }

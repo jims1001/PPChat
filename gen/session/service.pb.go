@@ -138,7 +138,7 @@ type SendReq struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Message       *message.MessageData `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Message       *message.MessageData `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
 	DedupId       string               `protobuf:"bytes,2,opt,name=dedup_id,json=dedupId,proto3" json:"dedup_id,omitempty"` // 幂等ID（窗口期内唯一）
 	AckId         string               `protobuf:"bytes,3,opt,name=ack_id,json=ackId,proto3" json:"ack_id,omitempty"`       // 请求方期望回执ID
 	CorrelationId string               `protobuf:"bytes,4,opt,name=correlation_id,json=correlationId,proto3" json:"correlation_id,omitempty"`
@@ -1463,85 +1463,85 @@ func file_session_service_proto_rawDescGZIP() []byte {
 
 var file_session_service_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_session_service_proto_goTypes = []any{
-	(*SubscribeRequest)(nil),         // 0: message.v1.SubscribeRequest
-	(*SendReq)(nil),                  // 1: message.v1.SendReq
-	(*SendResp)(nil),                 // 2: message.v1.SendResp
-	(*BatchSendReq)(nil),             // 3: message.v1.BatchSendReq
-	(*BatchSendResp)(nil),            // 4: message.v1.BatchSendResp
-	(*EditMessageReq)(nil),           // 5: message.v1.EditMessageReq
-	(*DeleteMessageReq)(nil),         // 6: message.v1.DeleteMessageReq
-	(*RecallReq)(nil),                // 7: message.v1.RecallReq
-	(*ReactReq)(nil),                 // 8: message.v1.ReactReq
-	(*MarkReadReq)(nil),              // 9: message.v1.MarkReadReq
-	(*ListHistoryReq)(nil),           // 10: message.v1.ListHistoryReq
-	(*ListHistoryResp)(nil),          // 11: message.v1.ListHistoryResp
-	(*GetMessageReq)(nil),            // 12: message.v1.GetMessageReq
-	(*PresenceSubscribeReq)(nil),     // 13: message.v1.PresenceSubscribeReq
-	(*SearchReq)(nil),                // 14: message.v1.SearchReq
-	(*SearchResp)(nil),               // 15: message.v1.SearchResp
-	(*message.MessageData)(nil),      // 16: message.v1.MessageData
-	(*message.AckData)(nil),          // 17: message.v1.AckData
-	(*message.Page)(nil),             // 18: message.v1.Page
-	(*message.PageResp)(nil),         // 19: message.v1.PageResp
-	(*message.MessageFrameData)(nil), // 20: message.v1.MessageFrameData
-	(*message.ActionEnvelope)(nil),   // 21: message.v1.ActionEnvelope
-	(*message.ActionSubscribe)(nil),  // 22: message.v1.ActionSubscribe
-	(*message.PresenceUpdate)(nil),   // 23: message.v1.PresenceUpdate
-	(*message.TypingStart)(nil),      // 24: message.v1.TypingStart
+	(*SubscribeRequest)(nil),         // 0: msg.v1.SubscribeRequest
+	(*SendReq)(nil),                  // 1: msg.v1.SendReq
+	(*SendResp)(nil),                 // 2: msg.v1.SendResp
+	(*BatchSendReq)(nil),             // 3: msg.v1.BatchSendReq
+	(*BatchSendResp)(nil),            // 4: msg.v1.BatchSendResp
+	(*EditMessageReq)(nil),           // 5: msg.v1.EditMessageReq
+	(*DeleteMessageReq)(nil),         // 6: msg.v1.DeleteMessageReq
+	(*RecallReq)(nil),                // 7: msg.v1.RecallReq
+	(*ReactReq)(nil),                 // 8: msg.v1.ReactReq
+	(*MarkReadReq)(nil),              // 9: msg.v1.MarkReadReq
+	(*ListHistoryReq)(nil),           // 10: msg.v1.ListHistoryReq
+	(*ListHistoryResp)(nil),          // 11: msg.v1.ListHistoryResp
+	(*GetMessageReq)(nil),            // 12: msg.v1.GetMessageReq
+	(*PresenceSubscribeReq)(nil),     // 13: msg.v1.PresenceSubscribeReq
+	(*SearchReq)(nil),                // 14: msg.v1.SearchReq
+	(*SearchResp)(nil),               // 15: msg.v1.SearchResp
+	(*message.MessageData)(nil),      // 16: msg.v1.MessageData
+	(*message.AckData)(nil),          // 17: msg.v1.AckData
+	(*message.Page)(nil),             // 18: msg.v1.Page
+	(*message.PageResp)(nil),         // 19: msg.v1.PageResp
+	(*message.MessageFrameData)(nil), // 20: msg.v1.MessageFrameData
+	(*message.ActionEnvelope)(nil),   // 21: msg.v1.ActionEnvelope
+	(*message.ActionSubscribe)(nil),  // 22: msg.v1.ActionSubscribe
+	(*message.PresenceUpdate)(nil),   // 23: msg.v1.PresenceUpdate
+	(*message.TypingStart)(nil),      // 24: msg.v1.TypingStart
 	(*emptypb.Empty)(nil),            // 25: google.protobuf.Empty
-	(*message.ActionAck)(nil),        // 26: message.v1.ActionAck
+	(*message.ActionAck)(nil),        // 26: msg.v1.ActionAck
 }
 var file_session_service_proto_depIdxs = []int32{
-	16, // 0: message.v1.SendReq.message:type_name -> message.v1.MessageData
-	17, // 1: message.v1.SendResp.ack:type_name -> message.v1.AckData
-	16, // 2: message.v1.SendResp.persisted:type_name -> message.v1.MessageData
-	1,  // 3: message.v1.BatchSendReq.items:type_name -> message.v1.SendReq
-	2,  // 4: message.v1.BatchSendResp.results:type_name -> message.v1.SendResp
-	16, // 5: message.v1.EditMessageReq.new_value:type_name -> message.v1.MessageData
-	18, // 6: message.v1.ListHistoryReq.page:type_name -> message.v1.Page
-	16, // 7: message.v1.ListHistoryResp.items:type_name -> message.v1.MessageData
-	19, // 8: message.v1.ListHistoryResp.page:type_name -> message.v1.PageResp
-	18, // 9: message.v1.SearchReq.page:type_name -> message.v1.Page
-	16, // 10: message.v1.SearchResp.items:type_name -> message.v1.MessageData
-	19, // 11: message.v1.SearchResp.page:type_name -> message.v1.PageResp
-	20, // 12: message.v1.RealtimeService.Connect:input_type -> message.v1.MessageFrameData
-	20, // 13: message.v1.RealtimeService.Publish:input_type -> message.v1.MessageFrameData
-	0,  // 14: message.v1.RealtimeService.Subscribe:input_type -> message.v1.SubscribeRequest
-	17, // 15: message.v1.RealtimeService.Ack:input_type -> message.v1.AckData
-	1,  // 16: message.v1.MessageService.Send:input_type -> message.v1.SendReq
-	3,  // 17: message.v1.MessageService.BatchSend:input_type -> message.v1.BatchSendReq
-	5,  // 18: message.v1.MessageService.Edit:input_type -> message.v1.EditMessageReq
-	6,  // 19: message.v1.MessageService.Delete:input_type -> message.v1.DeleteMessageReq
-	7,  // 20: message.v1.MessageService.Recall:input_type -> message.v1.RecallReq
-	8,  // 21: message.v1.MessageService.React:input_type -> message.v1.ReactReq
-	9,  // 22: message.v1.MessageService.MarkRead:input_type -> message.v1.MarkReadReq
-	10, // 23: message.v1.MessageService.ListHistory:input_type -> message.v1.ListHistoryReq
-	12, // 24: message.v1.MessageService.GetMessage:input_type -> message.v1.GetMessageReq
-	21, // 25: message.v1.CollabService.PerformAction:input_type -> message.v1.ActionEnvelope
-	22, // 26: message.v1.CollabService.SubscribeActions:input_type -> message.v1.ActionSubscribe
-	23, // 27: message.v1.PresenceService.UpdatePresence:input_type -> message.v1.PresenceUpdate
-	24, // 28: message.v1.PresenceService.Typing:input_type -> message.v1.TypingStart
-	13, // 29: message.v1.PresenceService.SubscribePresence:input_type -> message.v1.PresenceSubscribeReq
-	14, // 30: message.v1.ArchiveService.Search:input_type -> message.v1.SearchReq
-	20, // 31: message.v1.RealtimeService.Connect:output_type -> message.v1.MessageFrameData
-	17, // 32: message.v1.RealtimeService.Publish:output_type -> message.v1.AckData
-	20, // 33: message.v1.RealtimeService.Subscribe:output_type -> message.v1.MessageFrameData
-	25, // 34: message.v1.RealtimeService.Ack:output_type -> google.protobuf.Empty
-	2,  // 35: message.v1.MessageService.Send:output_type -> message.v1.SendResp
-	4,  // 36: message.v1.MessageService.BatchSend:output_type -> message.v1.BatchSendResp
-	17, // 37: message.v1.MessageService.Edit:output_type -> message.v1.AckData
-	17, // 38: message.v1.MessageService.Delete:output_type -> message.v1.AckData
-	17, // 39: message.v1.MessageService.Recall:output_type -> message.v1.AckData
-	17, // 40: message.v1.MessageService.React:output_type -> message.v1.AckData
-	17, // 41: message.v1.MessageService.MarkRead:output_type -> message.v1.AckData
-	11, // 42: message.v1.MessageService.ListHistory:output_type -> message.v1.ListHistoryResp
-	16, // 43: message.v1.MessageService.GetMessage:output_type -> message.v1.MessageData
-	26, // 44: message.v1.CollabService.PerformAction:output_type -> message.v1.ActionAck
-	21, // 45: message.v1.CollabService.SubscribeActions:output_type -> message.v1.ActionEnvelope
-	17, // 46: message.v1.PresenceService.UpdatePresence:output_type -> message.v1.AckData
-	17, // 47: message.v1.PresenceService.Typing:output_type -> message.v1.AckData
-	23, // 48: message.v1.PresenceService.SubscribePresence:output_type -> message.v1.PresenceUpdate
-	15, // 49: message.v1.ArchiveService.Search:output_type -> message.v1.SearchResp
+	16, // 0: msg.v1.SendReq.msg:type_name -> msg.v1.MessageData
+	17, // 1: msg.v1.SendResp.ack:type_name -> msg.v1.AckData
+	16, // 2: msg.v1.SendResp.persisted:type_name -> msg.v1.MessageData
+	1,  // 3: msg.v1.BatchSendReq.items:type_name -> msg.v1.SendReq
+	2,  // 4: msg.v1.BatchSendResp.results:type_name -> msg.v1.SendResp
+	16, // 5: msg.v1.EditMessageReq.new_value:type_name -> msg.v1.MessageData
+	18, // 6: msg.v1.ListHistoryReq.page:type_name -> msg.v1.Page
+	16, // 7: msg.v1.ListHistoryResp.items:type_name -> msg.v1.MessageData
+	19, // 8: msg.v1.ListHistoryResp.page:type_name -> msg.v1.PageResp
+	18, // 9: msg.v1.SearchReq.page:type_name -> msg.v1.Page
+	16, // 10: msg.v1.SearchResp.items:type_name -> msg.v1.MessageData
+	19, // 11: msg.v1.SearchResp.page:type_name -> msg.v1.PageResp
+	20, // 12: msg.v1.RealtimeService.Connect:input_type -> msg.v1.MessageFrameData
+	20, // 13: msg.v1.RealtimeService.Publish:input_type -> msg.v1.MessageFrameData
+	0,  // 14: msg.v1.RealtimeService.Subscribe:input_type -> msg.v1.SubscribeRequest
+	17, // 15: msg.v1.RealtimeService.Ack:input_type -> msg.v1.AckData
+	1,  // 16: msg.v1.MessageService.Send:input_type -> msg.v1.SendReq
+	3,  // 17: msg.v1.MessageService.BatchSend:input_type -> msg.v1.BatchSendReq
+	5,  // 18: msg.v1.MessageService.Edit:input_type -> msg.v1.EditMessageReq
+	6,  // 19: msg.v1.MessageService.Delete:input_type -> msg.v1.DeleteMessageReq
+	7,  // 20: msg.v1.MessageService.Recall:input_type -> msg.v1.RecallReq
+	8,  // 21: msg.v1.MessageService.React:input_type -> msg.v1.ReactReq
+	9,  // 22: msg.v1.MessageService.MarkRead:input_type -> msg.v1.MarkReadReq
+	10, // 23: msg.v1.MessageService.ListHistory:input_type -> msg.v1.ListHistoryReq
+	12, // 24: msg.v1.MessageService.GetMessage:input_type -> msg.v1.GetMessageReq
+	21, // 25: msg.v1.CollabService.PerformAction:input_type -> msg.v1.ActionEnvelope
+	22, // 26: msg.v1.CollabService.SubscribeActions:input_type -> msg.v1.ActionSubscribe
+	23, // 27: msg.v1.PresenceService.UpdatePresence:input_type -> msg.v1.PresenceUpdate
+	24, // 28: msg.v1.PresenceService.Typing:input_type -> msg.v1.TypingStart
+	13, // 29: msg.v1.PresenceService.SubscribePresence:input_type -> msg.v1.PresenceSubscribeReq
+	14, // 30: msg.v1.ArchiveService.Search:input_type -> msg.v1.SearchReq
+	20, // 31: msg.v1.RealtimeService.Connect:output_type -> msg.v1.MessageFrameData
+	17, // 32: msg.v1.RealtimeService.Publish:output_type -> msg.v1.AckData
+	20, // 33: msg.v1.RealtimeService.Subscribe:output_type -> msg.v1.MessageFrameData
+	25, // 34: msg.v1.RealtimeService.Ack:output_type -> google.protobuf.Empty
+	2,  // 35: msg.v1.MessageService.Send:output_type -> msg.v1.SendResp
+	4,  // 36: msg.v1.MessageService.BatchSend:output_type -> msg.v1.BatchSendResp
+	17, // 37: msg.v1.MessageService.Edit:output_type -> msg.v1.AckData
+	17, // 38: msg.v1.MessageService.Delete:output_type -> msg.v1.AckData
+	17, // 39: msg.v1.MessageService.Recall:output_type -> msg.v1.AckData
+	17, // 40: msg.v1.MessageService.React:output_type -> msg.v1.AckData
+	17, // 41: msg.v1.MessageService.MarkRead:output_type -> msg.v1.AckData
+	11, // 42: msg.v1.MessageService.ListHistory:output_type -> msg.v1.ListHistoryResp
+	16, // 43: msg.v1.MessageService.GetMessage:output_type -> msg.v1.MessageData
+	26, // 44: msg.v1.CollabService.PerformAction:output_type -> msg.v1.ActionAck
+	21, // 45: msg.v1.CollabService.SubscribeActions:output_type -> msg.v1.ActionEnvelope
+	17, // 46: msg.v1.PresenceService.UpdatePresence:output_type -> msg.v1.AckData
+	17, // 47: msg.v1.PresenceService.Typing:output_type -> msg.v1.AckData
+	23, // 48: msg.v1.PresenceService.SubscribePresence:output_type -> msg.v1.PresenceUpdate
+	15, // 49: msg.v1.ArchiveService.Search:output_type -> msg.v1.SearchResp
 	31, // [31:50] is the sub-list for method output_type
 	12, // [12:31] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name

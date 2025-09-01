@@ -23,7 +23,7 @@ func main() {
 	global.ConfigRedis()
 	global.ConfigKafka()
 
-	// Initialize the RPC message handling service
+	// Initialize the RPC msg handling service
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatal(err)

@@ -19,9 +19,9 @@ func InitAsyncProducerFromClient() error {
 		for {
 			select {
 			case msg := <-AsyncProd.Successes():
-				log.Printf("Async message sent to topic=%s partition=%d offset=%d", msg.Topic, msg.Partition, msg.Offset)
+				log.Printf("Async msg sent to topic=%s partition=%d offset=%d", msg.Topic, msg.Partition, msg.Offset)
 			case err := <-AsyncProd.Errors():
-				log.Printf("Async message error: %v", err)
+				log.Printf("Async msg error: %v", err)
 			}
 		}
 	}()

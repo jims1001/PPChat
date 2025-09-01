@@ -2,6 +2,7 @@ package chat
 
 import (
 	pb "PProject/gen/message"
+	ka "PProject/service/kafka"
 	"context"
 	"fmt"
 	"log"
@@ -16,7 +17,7 @@ import (
 type Server struct {
 	gwID       string
 	routerAddr string
-	reg        *registry
+	reg        *Registry
 	// below fields are used by ws_server for writing back to clients
 	incoming    chan *pb.MessageFrame // frames from router destined to local users
 	connection  chan *pb.MessageFrame // 只处理 连接的消息
@@ -27,6 +28,8 @@ type Server struct {
 	dataOutbound chan *WSConnectionMsg     // 普通数据处理
 	disp         *Dispatcher               // 处理器
 	connMgr      *ConnManager              // connection manager
+
+	msgHandler ka.ProducerHandler
 }
 
 type WSConnectionMsg struct {
@@ -54,14 +57,15 @@ func SendFrameJSON(conn *websocket.Conn, frame *pb.MessageFrameData) error {
 	return conn.WriteMessage(websocket.TextMessage, data)
 }
 
-func NewServer(gwID, routerAddr string, conn *ConnManager) (*Server, error) {
+func NewServer(gwID, routerAddr string, conn *ConnManager, msgHandler ka.ProducerHandler) (*Server, error) {
 	return &Server{
 		gwID:       gwID,
 		routerAddr: routerAddr,
-		reg:        newRegistry(),
+		reg:        NewRegistry(),
 		incoming:   make(chan *pb.MessageFrame, 4096),
 		connMgr:    conn,
 		disp:       NewDispatcher(),
+		msgHandler: msgHandler,
 	}, nil
 }
 
@@ -90,6 +94,7 @@ func (s *Server) RunToRouter() {
 	s.LoopConnect(ctx)
 	s.LoopAuth(ctx)
 	s.LoopData(ctx)
+	s.LoopRelayData(ctx)
 
 	for {
 		if err := s.loopRouter(); err != nil {
@@ -273,7 +278,7 @@ func (s *Server) LoopData(ctx context.Context) {
 					continue
 				}
 
-				ws, res := s.connMgr.Get(msg.Frame.To)
+				_, res := s.connMgr.Get(msg.Frame.To)
 				if !res {
 					log.Printf("[数据处理] 获取到有效的客户端   error: %v", res)
 					continue
@@ -287,6 +292,71 @@ func (s *Server) LoopData(ctx context.Context) {
 				}
 				log.Printf("[数据处理] 需要发送到数据 to data%s", string(data))
 
+				topicKey := ka.SelectTopicByUser(msg.Frame.To, ka.GenTopics())
+				if s.msgHandler != nil {
+
+					err := s.msgHandler(topicKey, msg.Frame.To, data)
+					if err != nil {
+						continue
+					}
+				}
+
+			}
+		}
+	}()
+}
+
+func (s *Server) LoopRelayData(ctx context.Context) {
+
+	go func() {
+		// defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[loopConnect] panic recovered: %v", r)
+			}
+		}()
+
+		outCh := s.RelayBound() // <-chan *pb.MessageFrameData
+
+		marshaller := protojson.MarshalOptions{
+			Indent:          "",    // 美化输出
+			UseEnumNumbers:  true,  // 枚举用数字
+			EmitUnpopulated: false, // 建议调成 true，客户端好解析
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Printf("[LoopRelayData 数据处理] ctx done: %v", ctx.Err())
+				return
+
+			case msg, ok := <-outCh:
+				if !ok {
+					log.Printf("[LoopRelayData 数据处理] 数据处理通道已经关闭")
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				connID := msg.GetConnId()
+				if connID == "" {
+					log.Printf("[LoopRelayData 数据处理] 没有获取到连接 conn_id, trace_id=%s type=%v", msg.GetTraceId(), msg.GetType())
+					continue
+				}
+
+				ws, res := s.connMgr.Get(msg.To)
+				if !res {
+					log.Printf("[数据处理] 获取到有效的客户端   error: %v", res)
+					continue
+				}
+
+				// 序列化（一次性）
+				data, err := marshaller.Marshal(msg)
+				if err != nil {
+					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", connID, err)
+					continue
+				}
+			
 				// 发送（带写超时）
 				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
 					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
@@ -374,6 +444,20 @@ func (s *Server) DataOutBound() chan *WSConnectionMsg {
 	return WsDataChannel
 }
 
+// RelayBound  得到一个转发的 消息通道
+func (s *Server) RelayBound() chan *pb.MessageFrameData {
+	return WsRelayBound
+}
+
+func RelayMsg(msgData []byte) error {
+	msgObj, err := ParseFrameJSON(msgData)
+	if err != nil {
+		return err
+	}
+	WsRelayBound <- msgObj
+	return nil
+}
+
 // WsOutbound package-scope channel shared with ws_server.go for simplicity
 var WsOutbound = make(chan *pb.MessageFrame, 8192)
 
@@ -383,3 +467,5 @@ var WsConnection = make(chan *pb.MessageFrameData, 8192)
 var WsAuthChannel = make(chan *WSConnectionMsg, 8192)
 
 var WsDataChannel = make(chan *WSConnectionMsg, 8192)
+
+var WsRelayBound = make(chan *pb.MessageFrameData, 8192)

@@ -4,11 +4,12 @@ import (
 	"PProject/service/kafka"
 	"PProject/service/nacos"
 	"fmt"
+	"log"
+	"net/http"
+
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
-	"log"
-	"net/http"
 )
 
 func main() {

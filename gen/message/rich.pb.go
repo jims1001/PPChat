@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/rich.proto
+// source: msg/rich.proto
 
 package messagepb
 
@@ -325,7 +325,7 @@ type Component struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     Component_Type     `protobuf:"varint,1,opt,name=type,proto3,enum=message.v1.Component_Type" json:"type,omitempty"`
+	Type     Component_Type     `protobuf:"varint,1,opt,name=type,proto3,enum=msg.v1.Component_Type" json:"type,omitempty"`
 	CustomId string             `protobuf:"bytes,2,opt,name=custom_id,json=customId,proto3" json:"custom_id,omitempty"` // 回传给交互事件
 	Label    string             `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`                       // 按钮标题或输入提示
 	Style    string             `protobuf:"bytes,4,opt,name=style,proto3" json:"style,omitempty"`                       // primary/secondary/danger/link...
@@ -956,27 +956,27 @@ func file_message_rich_proto_rawDescGZIP() []byte {
 var file_message_rich_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_message_rich_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_message_rich_proto_goTypes = []any{
-	(Component_Type)(0),     // 0: message.v1.Component.Type
-	(*RichMessage)(nil),     // 1: message.v1.RichMessage
-	(*Embed)(nil),           // 2: message.v1.Embed
-	(*EmbedField)(nil),      // 3: message.v1.EmbedField
-	(*Component)(nil),       // 4: message.v1.Component
-	(*ComponentOption)(nil), // 5: message.v1.ComponentOption
-	(*Attachment)(nil),      // 6: message.v1.Attachment
-	(*Sticker)(nil),         // 7: message.v1.Sticker
-	(*Emoji)(nil),           // 8: message.v1.Emoji
-	(*AutoModSignal)(nil),   // 9: message.v1.AutoModSignal
-	(*Report)(nil),          // 10: message.v1.Report
+	(Component_Type)(0),     // 0: msg.v1.Component.Type
+	(*RichMessage)(nil),     // 1: msg.v1.RichMessage
+	(*Embed)(nil),           // 2: msg.v1.Embed
+	(*EmbedField)(nil),      // 3: msg.v1.EmbedField
+	(*Component)(nil),       // 4: msg.v1.Component
+	(*ComponentOption)(nil), // 5: msg.v1.ComponentOption
+	(*Attachment)(nil),      // 6: msg.v1.Attachment
+	(*Sticker)(nil),         // 7: msg.v1.Sticker
+	(*Emoji)(nil),           // 8: msg.v1.Emoji
+	(*AutoModSignal)(nil),   // 9: msg.v1.AutoModSignal
+	(*Report)(nil),          // 10: msg.v1.Report
 }
 var file_message_rich_proto_depIdxs = []int32{
-	2, // 0: message.v1.RichMessage.embeds:type_name -> message.v1.Embed
-	4, // 1: message.v1.RichMessage.components:type_name -> message.v1.Component
-	6, // 2: message.v1.RichMessage.attachments:type_name -> message.v1.Attachment
-	7, // 3: message.v1.RichMessage.stickers:type_name -> message.v1.Sticker
-	8, // 4: message.v1.RichMessage.emojis:type_name -> message.v1.Emoji
-	3, // 5: message.v1.Embed.fields:type_name -> message.v1.EmbedField
-	0, // 6: message.v1.Component.type:type_name -> message.v1.Component.Type
-	5, // 7: message.v1.Component.options:type_name -> message.v1.ComponentOption
+	2, // 0: msg.v1.RichMessage.embeds:type_name -> msg.v1.Embed
+	4, // 1: msg.v1.RichMessage.components:type_name -> msg.v1.Component
+	6, // 2: msg.v1.RichMessage.attachments:type_name -> msg.v1.Attachment
+	7, // 3: msg.v1.RichMessage.stickers:type_name -> msg.v1.Sticker
+	8, // 4: msg.v1.RichMessage.emojis:type_name -> msg.v1.Emoji
+	3, // 5: msg.v1.Embed.fields:type_name -> msg.v1.EmbedField
+	0, // 6: msg.v1.Component.type:type_name -> msg.v1.Component.Type
+	5, // 7: msg.v1.Component.options:type_name -> msg.v1.ComponentOption
 	8, // [8:8] is the sub-list for method output_type
 	8, // [8:8] is the sub-list for method input_type
 	8, // [8:8] is the sub-list for extension type_name

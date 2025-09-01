@@ -9,7 +9,7 @@ type Object struct {
 	// —— 基础标识 ——
 	Name   string `bson:"name"`    // 原始文件名（上传时的文件名，含扩展名）
 	UserID string `bson:"user_id"` // 拥有者/归属用户ID（可用于权限判断与分片）
-	Group  string `bson:"group"`   // 业务分组：avatar/message/cover/temp 等（便于策略控制）
+	Group  string `bson:"group"`   // 业务分组：avatar/msg/cover/temp 等（便于策略控制）
 	Engine string `bson:"engine"`  // 存储引擎：s3/minio/oss/cos/gcs/localfs...
 	Bucket string `bson:"bucket"`  // 目标桶/容器名（S3/OSS等）
 	Key    string `bson:"key"`     // 对象Key/路径（后端定位，唯一约束建议：bucket+key）

@@ -274,23 +274,23 @@ func file_manage_admin_proto_rawDescGZIP() []byte {
 
 var file_manage_admin_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_manage_admin_proto_goTypes = []any{
-	(*KickUserReq)(nil),              // 0: message.v1.KickUserReq
-	(*MuteUserReq)(nil),              // 1: message.v1.MuteUserReq
-	(*BroadcastReq)(nil),             // 2: message.v1.BroadcastReq
-	(*message.MessageFrameData)(nil), // 3: message.v1.MessageFrameData
-	(*message.SystemEvent)(nil),      // 4: message.v1.SystemEvent
-	(*message.AckData)(nil),          // 5: message.v1.AckData
+	(*KickUserReq)(nil),              // 0: msg.v1.KickUserReq
+	(*MuteUserReq)(nil),              // 1: msg.v1.MuteUserReq
+	(*BroadcastReq)(nil),             // 2: msg.v1.BroadcastReq
+	(*message.MessageFrameData)(nil), // 3: msg.v1.MessageFrameData
+	(*message.SystemEvent)(nil),      // 4: msg.v1.SystemEvent
+	(*message.AckData)(nil),          // 5: msg.v1.AckData
 }
 var file_manage_admin_proto_depIdxs = []int32{
-	3, // 0: message.v1.BroadcastReq.frame:type_name -> message.v1.MessageFrameData
-	4, // 1: message.v1.AdminService.PublishSystemEvent:input_type -> message.v1.SystemEvent
-	0, // 2: message.v1.AdminService.KickUser:input_type -> message.v1.KickUserReq
-	1, // 3: message.v1.AdminService.MuteUser:input_type -> message.v1.MuteUserReq
-	2, // 4: message.v1.AdminService.Broadcast:input_type -> message.v1.BroadcastReq
-	5, // 5: message.v1.AdminService.PublishSystemEvent:output_type -> message.v1.AckData
-	5, // 6: message.v1.AdminService.KickUser:output_type -> message.v1.AckData
-	5, // 7: message.v1.AdminService.MuteUser:output_type -> message.v1.AckData
-	5, // 8: message.v1.AdminService.Broadcast:output_type -> message.v1.AckData
+	3, // 0: msg.v1.BroadcastReq.frame:type_name -> msg.v1.MessageFrameData
+	4, // 1: msg.v1.AdminService.PublishSystemEvent:input_type -> msg.v1.SystemEvent
+	0, // 2: msg.v1.AdminService.KickUser:input_type -> msg.v1.KickUserReq
+	1, // 3: msg.v1.AdminService.MuteUser:input_type -> msg.v1.MuteUserReq
+	2, // 4: msg.v1.AdminService.Broadcast:input_type -> msg.v1.BroadcastReq
+	5, // 5: msg.v1.AdminService.PublishSystemEvent:output_type -> msg.v1.AckData
+	5, // 6: msg.v1.AdminService.KickUser:output_type -> msg.v1.AckData
+	5, // 7: msg.v1.AdminService.MuteUser:output_type -> msg.v1.AckData
+	5, // 8: msg.v1.AdminService.Broadcast:output_type -> msg.v1.AckData
 	5, // [5:9] is the sub-list for method output_type
 	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

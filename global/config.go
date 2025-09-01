@@ -3,6 +3,7 @@ package global
 import (
 	"PProject/data/database/mgo/mongoutil"
 	mid "PProject/middleware"
+	msg "PProject/module/message"
 	ka "PProject/service/kafka"
 	mgoSrv "PProject/service/mgo"
 	redis "PProject/service/storage/redis"
@@ -17,7 +18,7 @@ func ConfigAll() {
 	ConfigIds()
 	ConfigRedis()
 	ConfigMgo()
-	ConfigKafka()
+	//ConfigKafka()
 
 }
 
@@ -70,7 +71,7 @@ func ConfigMgo() {
 }
 
 // ConfigKafka 在后台 goroutine 中启动 Kafka Client / Producer / Consumer
-func ConfigKafka() {
+func ConfigKafka(handler ka.MessageHandler) {
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -106,7 +107,7 @@ func ConfigKafka() {
 		}
 
 		// 4) 注册默认 handler
-		ka.RegisterDefaultHandlers(topics)
+		ka.RegisterDefaultHandlers(topics, msg.HandlerTopicMessage)
 
 		// 5) 启动 ConsumerGroup
 		_, err := ka.BootConsumers(topics)

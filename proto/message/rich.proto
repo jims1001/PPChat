@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package message.v1;
-option go_package = "PProject/gen/message;messagepb";
+option go_package = "PProject/gen/msg;messagepb";
 
 // 富卡片/按钮/附件/贴纸/表情（Discord/Telegram风格）
 message RichMessage {

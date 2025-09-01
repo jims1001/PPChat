@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package message.v1;
 
-option go_package = "PProject/gen/message;messagepb";
+option go_package = "PProject/gen/msg;messagepb";
 
 import "google/protobuf/any.proto";
 import "message/message.proto";

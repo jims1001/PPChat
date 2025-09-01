@@ -20,10 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	AdminService_PublishSystemEvent_FullMethodName = "/message.v1.AdminService/PublishSystemEvent"
-	AdminService_KickUser_FullMethodName           = "/message.v1.AdminService/KickUser"
-	AdminService_MuteUser_FullMethodName           = "/message.v1.AdminService/MuteUser"
-	AdminService_Broadcast_FullMethodName          = "/message.v1.AdminService/Broadcast"
+	AdminService_PublishSystemEvent_FullMethodName = "/msg.v1.AdminService/PublishSystemEvent"
+	AdminService_KickUser_FullMethodName           = "/msg.v1.AdminService/KickUser"
+	AdminService_MuteUser_FullMethodName           = "/msg.v1.AdminService/MuteUser"
+	AdminService_Broadcast_FullMethodName          = "/msg.v1.AdminService/Broadcast"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -204,7 +204,7 @@ func _AdminService_Broadcast_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var AdminService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.AdminService",
+	ServiceName: "msg.v1.AdminService",
 	HandlerType: (*AdminServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

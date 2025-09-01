@@ -21,10 +21,10 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	RealtimeService_Connect_FullMethodName   = "/message.v1.RealtimeService/Connect"
-	RealtimeService_Publish_FullMethodName   = "/message.v1.RealtimeService/Publish"
-	RealtimeService_Subscribe_FullMethodName = "/message.v1.RealtimeService/Subscribe"
-	RealtimeService_Ack_FullMethodName       = "/message.v1.RealtimeService/Ack"
+	RealtimeService_Connect_FullMethodName   = "/msg.v1.RealtimeService/Connect"
+	RealtimeService_Publish_FullMethodName   = "/msg.v1.RealtimeService/Publish"
+	RealtimeService_Subscribe_FullMethodName = "/msg.v1.RealtimeService/Subscribe"
+	RealtimeService_Ack_FullMethodName       = "/msg.v1.RealtimeService/Ack"
 )
 
 // RealtimeServiceClient is the client API for RealtimeService service.
@@ -269,7 +269,7 @@ func _RealtimeService_Ack_Handler(srv interface{}, ctx context.Context, dec func
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var RealtimeService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.RealtimeService",
+	ServiceName: "msg.v1.RealtimeService",
 	HandlerType: (*RealtimeServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -298,15 +298,15 @@ var RealtimeService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	MessageService_Send_FullMethodName        = "/message.v1.MessageService/Send"
-	MessageService_BatchSend_FullMethodName   = "/message.v1.MessageService/BatchSend"
-	MessageService_Edit_FullMethodName        = "/message.v1.MessageService/Edit"
-	MessageService_Delete_FullMethodName      = "/message.v1.MessageService/Delete"
-	MessageService_Recall_FullMethodName      = "/message.v1.MessageService/Recall"
-	MessageService_React_FullMethodName       = "/message.v1.MessageService/React"
-	MessageService_MarkRead_FullMethodName    = "/message.v1.MessageService/MarkRead"
-	MessageService_ListHistory_FullMethodName = "/message.v1.MessageService/ListHistory"
-	MessageService_GetMessage_FullMethodName  = "/message.v1.MessageService/GetMessage"
+	MessageService_Send_FullMethodName        = "/msg.v1.MessageService/Send"
+	MessageService_BatchSend_FullMethodName   = "/msg.v1.MessageService/BatchSend"
+	MessageService_Edit_FullMethodName        = "/msg.v1.MessageService/Edit"
+	MessageService_Delete_FullMethodName      = "/msg.v1.MessageService/Delete"
+	MessageService_Recall_FullMethodName      = "/msg.v1.MessageService/Recall"
+	MessageService_React_FullMethodName       = "/msg.v1.MessageService/React"
+	MessageService_MarkRead_FullMethodName    = "/msg.v1.MessageService/MarkRead"
+	MessageService_ListHistory_FullMethodName = "/msg.v1.MessageService/ListHistory"
+	MessageService_GetMessage_FullMethodName  = "/msg.v1.MessageService/GetMessage"
 )
 
 // MessageServiceClient is the client API for MessageService service.
@@ -670,7 +670,7 @@ func _MessageService_GetMessage_Handler(srv interface{}, ctx context.Context, de
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MessageService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.MessageService",
+	ServiceName: "msg.v1.MessageService",
 	HandlerType: (*MessageServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -715,8 +715,8 @@ var MessageService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	CollabService_PerformAction_FullMethodName    = "/message.v1.CollabService/PerformAction"
-	CollabService_SubscribeActions_FullMethodName = "/message.v1.CollabService/SubscribeActions"
+	CollabService_PerformAction_FullMethodName    = "/msg.v1.CollabService/PerformAction"
+	CollabService_SubscribeActions_FullMethodName = "/msg.v1.CollabService/SubscribeActions"
 )
 
 // CollabServiceClient is the client API for CollabService service.
@@ -861,7 +861,7 @@ func (x *collabServiceSubscribeActionsServer) Send(m *message.ActionEnvelope) er
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var CollabService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.CollabService",
+	ServiceName: "msg.v1.CollabService",
 	HandlerType: (*CollabServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -880,9 +880,9 @@ var CollabService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	PresenceService_UpdatePresence_FullMethodName    = "/message.v1.PresenceService/UpdatePresence"
-	PresenceService_Typing_FullMethodName            = "/message.v1.PresenceService/Typing"
-	PresenceService_SubscribePresence_FullMethodName = "/message.v1.PresenceService/SubscribePresence"
+	PresenceService_UpdatePresence_FullMethodName    = "/msg.v1.PresenceService/UpdatePresence"
+	PresenceService_Typing_FullMethodName            = "/msg.v1.PresenceService/Typing"
+	PresenceService_SubscribePresence_FullMethodName = "/msg.v1.PresenceService/SubscribePresence"
 )
 
 // PresenceServiceClient is the client API for PresenceService service.
@@ -1056,7 +1056,7 @@ func (x *presenceServiceSubscribePresenceServer) Send(m *message.PresenceUpdate)
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var PresenceService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.PresenceService",
+	ServiceName: "msg.v1.PresenceService",
 	HandlerType: (*PresenceServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -1079,7 +1079,7 @@ var PresenceService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ArchiveService_Search_FullMethodName = "/message.v1.ArchiveService/Search"
+	ArchiveService_Search_FullMethodName = "/msg.v1.ArchiveService/Search"
 )
 
 // ArchiveServiceClient is the client API for ArchiveService service.
@@ -1163,7 +1163,7 @@ func _ArchiveService_Search_Handler(srv interface{}, ctx context.Context, dec fu
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ArchiveService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "message.v1.ArchiveService",
+	ServiceName: "msg.v1.ArchiveService",
 	HandlerType: (*ArchiveServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

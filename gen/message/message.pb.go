@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/message.proto
+// source: msg/msg.proto
 
 // ============================================================================
 // 消息协议（IM 通用消息模型）
@@ -3974,89 +3974,89 @@ func file_message_message_proto_rawDescGZIP() []byte {
 var file_message_message_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_message_message_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_message_message_proto_goTypes = []any{
-	(SessionType)(0),         // 0: message.v1.SessionType
-	(ContentType)(0),         // 1: message.v1.ContentType
-	(MsgFrom)(0),             // 2: message.v1.MsgFrom
-	(PlatformID)(0),          // 3: message.v1.PlatformID
-	(*MessageData)(nil),      // 4: message.v1.MessageData
-	(*OfflinePushInfo)(nil),  // 5: message.v1.OfflinePushInfo
-	(*MessageReceipt)(nil),   // 6: message.v1.MessageReceipt
-	(*MessageRevoked)(nil),   // 7: message.v1.MessageRevoked
-	(*MessageReaction)(nil),  // 8: message.v1.MessageReaction
-	(*ImageInfo)(nil),        // 9: message.v1.ImageInfo
-	(*PictureBaseInfo)(nil),  // 10: message.v1.PictureBaseInfo
-	(*SoundBaseInfo)(nil),    // 11: message.v1.SoundBaseInfo
-	(*VideoBaseInfo)(nil),    // 12: message.v1.VideoBaseInfo
-	(*FileBaseInfo)(nil),     // 13: message.v1.FileBaseInfo
-	(*TextElem)(nil),         // 14: message.v1.TextElem
-	(*CardElem)(nil),         // 15: message.v1.CardElem
-	(*PictureElem)(nil),      // 16: message.v1.PictureElem
-	(*SoundElem)(nil),        // 17: message.v1.SoundElem
-	(*VideoElem)(nil),        // 18: message.v1.VideoElem
-	(*FileElem)(nil),         // 19: message.v1.FileElem
-	(*MergeElem)(nil),        // 20: message.v1.MergeElem
-	(*AtTextElem)(nil),       // 21: message.v1.AtTextElem
-	(*FaceElem)(nil),         // 22: message.v1.FaceElem
-	(*LocationElem)(nil),     // 23: message.v1.LocationElem
-	(*CustomElem)(nil),       // 24: message.v1.CustomElem
-	(*QuoteElem)(nil),        // 25: message.v1.QuoteElem
-	(*NotificationElem)(nil), // 26: message.v1.NotificationElem
-	(*AdvancedTextElem)(nil), // 27: message.v1.AdvancedTextElem
-	(*TypingElem)(nil),       // 28: message.v1.TypingElem
-	(*MarkdownTextElem)(nil), // 29: message.v1.MarkdownTextElem
-	(*AttachedInfoElem)(nil), // 30: message.v1.AttachedInfoElem
-	(*SystemEvent)(nil),      // 31: message.v1.SystemEvent
-	(*UploadProgress)(nil),   // 32: message.v1.UploadProgress
-	(*ReactionElem)(nil),     // 33: message.v1.ReactionElem
-	(*UserReactionElem)(nil), // 34: message.v1.UserReactionElem
-	(*MessageEntity)(nil),    // 35: message.v1.MessageEntity
-	(*GroupHasReadInfo)(nil), // 36: message.v1.GroupHasReadInfo
-	(*AtInfo)(nil),           // 37: message.v1.AtInfo
-	nil,                      // 38: message.v1.SystemEvent.DataEntry
-	(*RichMessage)(nil),      // 39: message.v1.RichMessage
-	(*AutoModSignal)(nil),    // 40: message.v1.AutoModSignal
+	(SessionType)(0),         // 0: msg.v1.SessionType
+	(ContentType)(0),         // 1: msg.v1.ContentType
+	(MsgFrom)(0),             // 2: msg.v1.MsgFrom
+	(PlatformID)(0),          // 3: msg.v1.PlatformID
+	(*MessageData)(nil),      // 4: msg.v1.MessageData
+	(*OfflinePushInfo)(nil),  // 5: msg.v1.OfflinePushInfo
+	(*MessageReceipt)(nil),   // 6: msg.v1.MessageReceipt
+	(*MessageRevoked)(nil),   // 7: msg.v1.MessageRevoked
+	(*MessageReaction)(nil),  // 8: msg.v1.MessageReaction
+	(*ImageInfo)(nil),        // 9: msg.v1.ImageInfo
+	(*PictureBaseInfo)(nil),  // 10: msg.v1.PictureBaseInfo
+	(*SoundBaseInfo)(nil),    // 11: msg.v1.SoundBaseInfo
+	(*VideoBaseInfo)(nil),    // 12: msg.v1.VideoBaseInfo
+	(*FileBaseInfo)(nil),     // 13: msg.v1.FileBaseInfo
+	(*TextElem)(nil),         // 14: msg.v1.TextElem
+	(*CardElem)(nil),         // 15: msg.v1.CardElem
+	(*PictureElem)(nil),      // 16: msg.v1.PictureElem
+	(*SoundElem)(nil),        // 17: msg.v1.SoundElem
+	(*VideoElem)(nil),        // 18: msg.v1.VideoElem
+	(*FileElem)(nil),         // 19: msg.v1.FileElem
+	(*MergeElem)(nil),        // 20: msg.v1.MergeElem
+	(*AtTextElem)(nil),       // 21: msg.v1.AtTextElem
+	(*FaceElem)(nil),         // 22: msg.v1.FaceElem
+	(*LocationElem)(nil),     // 23: msg.v1.LocationElem
+	(*CustomElem)(nil),       // 24: msg.v1.CustomElem
+	(*QuoteElem)(nil),        // 25: msg.v1.QuoteElem
+	(*NotificationElem)(nil), // 26: msg.v1.NotificationElem
+	(*AdvancedTextElem)(nil), // 27: msg.v1.AdvancedTextElem
+	(*TypingElem)(nil),       // 28: msg.v1.TypingElem
+	(*MarkdownTextElem)(nil), // 29: msg.v1.MarkdownTextElem
+	(*AttachedInfoElem)(nil), // 30: msg.v1.AttachedInfoElem
+	(*SystemEvent)(nil),      // 31: msg.v1.SystemEvent
+	(*UploadProgress)(nil),   // 32: msg.v1.UploadProgress
+	(*ReactionElem)(nil),     // 33: msg.v1.ReactionElem
+	(*UserReactionElem)(nil), // 34: msg.v1.UserReactionElem
+	(*MessageEntity)(nil),    // 35: msg.v1.MessageEntity
+	(*GroupHasReadInfo)(nil), // 36: msg.v1.GroupHasReadInfo
+	(*AtInfo)(nil),           // 37: msg.v1.AtInfo
+	nil,                      // 38: msg.v1.SystemEvent.DataEntry
+	(*RichMessage)(nil),      // 39: msg.v1.RichMessage
+	(*AutoModSignal)(nil),    // 40: msg.v1.AutoModSignal
 	(*structpb.Struct)(nil),  // 41: google.protobuf.Struct
 }
 var file_message_message_proto_depIdxs = []int32{
-	5,  // 0: message.v1.MessageData.offline_push:type_name -> message.v1.OfflinePushInfo
-	14, // 1: message.v1.MessageData.text_elem:type_name -> message.v1.TextElem
-	15, // 2: message.v1.MessageData.card_elem:type_name -> message.v1.CardElem
-	16, // 3: message.v1.MessageData.picture_elem:type_name -> message.v1.PictureElem
-	17, // 4: message.v1.MessageData.sound_elem:type_name -> message.v1.SoundElem
-	18, // 5: message.v1.MessageData.video_elem:type_name -> message.v1.VideoElem
-	19, // 6: message.v1.MessageData.file_elem:type_name -> message.v1.FileElem
-	20, // 7: message.v1.MessageData.merge_elem:type_name -> message.v1.MergeElem
-	21, // 8: message.v1.MessageData.at_text_elem:type_name -> message.v1.AtTextElem
-	22, // 9: message.v1.MessageData.face_elem:type_name -> message.v1.FaceElem
-	23, // 10: message.v1.MessageData.location_elem:type_name -> message.v1.LocationElem
-	24, // 11: message.v1.MessageData.custom_elem:type_name -> message.v1.CustomElem
-	25, // 12: message.v1.MessageData.quote_elem:type_name -> message.v1.QuoteElem
-	26, // 13: message.v1.MessageData.notification_elem:type_name -> message.v1.NotificationElem
-	27, // 14: message.v1.MessageData.advanced_text_elem:type_name -> message.v1.AdvancedTextElem
-	28, // 15: message.v1.MessageData.typing_elem:type_name -> message.v1.TypingElem
-	30, // 16: message.v1.MessageData.attached_info_elem:type_name -> message.v1.AttachedInfoElem
-	29, // 17: message.v1.MessageData.markdown_text_elem:type_name -> message.v1.MarkdownTextElem
-	39, // 18: message.v1.MessageData.rich:type_name -> message.v1.RichMessage
-	40, // 19: message.v1.MessageData.automod:type_name -> message.v1.AutoModSignal
-	10, // 20: message.v1.PictureElem.source_picture:type_name -> message.v1.PictureBaseInfo
-	10, // 21: message.v1.PictureElem.big_picture:type_name -> message.v1.PictureBaseInfo
-	10, // 22: message.v1.PictureElem.snapshot_picture:type_name -> message.v1.PictureBaseInfo
-	4,  // 23: message.v1.MergeElem.multi_message:type_name -> message.v1.MessageData
-	35, // 24: message.v1.MergeElem.message_entity_list:type_name -> message.v1.MessageEntity
-	37, // 25: message.v1.AtTextElem.at_users_info:type_name -> message.v1.AtInfo
-	4,  // 26: message.v1.AtTextElem.quote_message:type_name -> message.v1.MessageData
-	41, // 27: message.v1.FaceElem.data:type_name -> google.protobuf.Struct
-	41, // 28: message.v1.CustomElem.data:type_name -> google.protobuf.Struct
-	4,  // 29: message.v1.QuoteElem.quote_message:type_name -> message.v1.MessageData
-	35, // 30: message.v1.QuoteElem.message_entity_list:type_name -> message.v1.MessageEntity
-	35, // 31: message.v1.AdvancedTextElem.message_entity_list:type_name -> message.v1.MessageEntity
-	36, // 32: message.v1.AttachedInfoElem.group_has_read_info:type_name -> message.v1.GroupHasReadInfo
-	35, // 33: message.v1.AttachedInfoElem.message_entity_list:type_name -> message.v1.MessageEntity
-	32, // 34: message.v1.AttachedInfoElem.progress:type_name -> message.v1.UploadProgress
-	38, // 35: message.v1.SystemEvent.data:type_name -> message.v1.SystemEvent.DataEntry
-	34, // 36: message.v1.ReactionElem.user_reaction_list:type_name -> message.v1.UserReactionElem
-	41, // 37: message.v1.ReactionElem.info:type_name -> google.protobuf.Struct
-	41, // 38: message.v1.UserReactionElem.info:type_name -> google.protobuf.Struct
+	5,  // 0: msg.v1.MessageData.offline_push:type_name -> msg.v1.OfflinePushInfo
+	14, // 1: msg.v1.MessageData.text_elem:type_name -> msg.v1.TextElem
+	15, // 2: msg.v1.MessageData.card_elem:type_name -> msg.v1.CardElem
+	16, // 3: msg.v1.MessageData.picture_elem:type_name -> msg.v1.PictureElem
+	17, // 4: msg.v1.MessageData.sound_elem:type_name -> msg.v1.SoundElem
+	18, // 5: msg.v1.MessageData.video_elem:type_name -> msg.v1.VideoElem
+	19, // 6: msg.v1.MessageData.file_elem:type_name -> msg.v1.FileElem
+	20, // 7: msg.v1.MessageData.merge_elem:type_name -> msg.v1.MergeElem
+	21, // 8: msg.v1.MessageData.at_text_elem:type_name -> msg.v1.AtTextElem
+	22, // 9: msg.v1.MessageData.face_elem:type_name -> msg.v1.FaceElem
+	23, // 10: msg.v1.MessageData.location_elem:type_name -> msg.v1.LocationElem
+	24, // 11: msg.v1.MessageData.custom_elem:type_name -> msg.v1.CustomElem
+	25, // 12: msg.v1.MessageData.quote_elem:type_name -> msg.v1.QuoteElem
+	26, // 13: msg.v1.MessageData.notification_elem:type_name -> msg.v1.NotificationElem
+	27, // 14: msg.v1.MessageData.advanced_text_elem:type_name -> msg.v1.AdvancedTextElem
+	28, // 15: msg.v1.MessageData.typing_elem:type_name -> msg.v1.TypingElem
+	30, // 16: msg.v1.MessageData.attached_info_elem:type_name -> msg.v1.AttachedInfoElem
+	29, // 17: msg.v1.MessageData.markdown_text_elem:type_name -> msg.v1.MarkdownTextElem
+	39, // 18: msg.v1.MessageData.rich:type_name -> msg.v1.RichMessage
+	40, // 19: msg.v1.MessageData.automod:type_name -> msg.v1.AutoModSignal
+	10, // 20: msg.v1.PictureElem.source_picture:type_name -> msg.v1.PictureBaseInfo
+	10, // 21: msg.v1.PictureElem.big_picture:type_name -> msg.v1.PictureBaseInfo
+	10, // 22: msg.v1.PictureElem.snapshot_picture:type_name -> msg.v1.PictureBaseInfo
+	4,  // 23: msg.v1.MergeElem.multi_message:type_name -> msg.v1.MessageData
+	35, // 24: msg.v1.MergeElem.message_entity_list:type_name -> msg.v1.MessageEntity
+	37, // 25: msg.v1.AtTextElem.at_users_info:type_name -> msg.v1.AtInfo
+	4,  // 26: msg.v1.AtTextElem.quote_message:type_name -> msg.v1.MessageData
+	41, // 27: msg.v1.FaceElem.data:type_name -> google.protobuf.Struct
+	41, // 28: msg.v1.CustomElem.data:type_name -> google.protobuf.Struct
+	4,  // 29: msg.v1.QuoteElem.quote_message:type_name -> msg.v1.MessageData
+	35, // 30: msg.v1.QuoteElem.message_entity_list:type_name -> msg.v1.MessageEntity
+	35, // 31: msg.v1.AdvancedTextElem.message_entity_list:type_name -> msg.v1.MessageEntity
+	36, // 32: msg.v1.AttachedInfoElem.group_has_read_info:type_name -> msg.v1.GroupHasReadInfo
+	35, // 33: msg.v1.AttachedInfoElem.message_entity_list:type_name -> msg.v1.MessageEntity
+	32, // 34: msg.v1.AttachedInfoElem.progress:type_name -> msg.v1.UploadProgress
+	38, // 35: msg.v1.SystemEvent.data:type_name -> msg.v1.SystemEvent.DataEntry
+	34, // 36: msg.v1.ReactionElem.user_reaction_list:type_name -> msg.v1.UserReactionElem
+	41, // 37: msg.v1.ReactionElem.info:type_name -> google.protobuf.Struct
+	41, // 38: msg.v1.UserReactionElem.info:type_name -> google.protobuf.Struct
 	39, // [39:39] is the sub-list for method output_type
 	39, // [39:39] is the sub-list for method input_type
 	39, // [39:39] is the sub-list for extension type_name

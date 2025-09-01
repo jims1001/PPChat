@@ -6,6 +6,7 @@ import (
 )
 
 type MessageHandler func(topic string, key, value []byte) error
+type ProducerHandler func(topic, key string, value []byte) error
 
 var (
 	handlerMap = make(map[string]MessageHandler)

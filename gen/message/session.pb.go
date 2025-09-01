@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.34.2
 // 	protoc        v5.29.3
-// source: message/session.proto
+// source: msg/session.proto
 
 package messagepb
 
@@ -534,13 +534,13 @@ func file_message_session_proto_rawDescGZIP() []byte {
 
 var file_message_session_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_message_session_proto_goTypes = []any{
-	(*PresenceUpdate)(nil),      // 0: message.v1.PresenceUpdate
-	(*TypingStart)(nil),         // 1: message.v1.TypingStart
-	(*GatewaySubscribe)(nil),    // 2: message.v1.GatewaySubscribe
-	(*ShardInfo)(nil),           // 3: message.v1.ShardInfo
-	(*RateHint)(nil),            // 4: message.v1.RateHint
-	(*PermissionOverwrite)(nil), // 5: message.v1.PermissionOverwrite
-	(*Role)(nil),                // 6: message.v1.Role
+	(*PresenceUpdate)(nil),      // 0: msg.v1.PresenceUpdate
+	(*TypingStart)(nil),         // 1: msg.v1.TypingStart
+	(*GatewaySubscribe)(nil),    // 2: msg.v1.GatewaySubscribe
+	(*ShardInfo)(nil),           // 3: msg.v1.ShardInfo
+	(*RateHint)(nil),            // 4: msg.v1.RateHint
+	(*PermissionOverwrite)(nil), // 5: msg.v1.PermissionOverwrite
+	(*Role)(nil),                // 6: msg.v1.Role
 }
 var file_message_session_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

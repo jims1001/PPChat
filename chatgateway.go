@@ -2,13 +2,15 @@ package main
 
 import (
 	pb "PProject/gen/gateway"
-	global "PProject/global"
+	"PProject/global"
 	mid "PProject/middleware"
 	"PProject/module/user"
 	"PProject/service/chat"
 	"log"
 	"net"
 	"os"
+
+	msg "PProject/module/message"
 
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
@@ -24,7 +26,7 @@ func main() {
 	global.ConfigRedis()
 	global.ConfigMgo()
 	global.ConfigMiddleware()
-	global.ConfigKafka()
+	global.ConfigKafka(msg.HandlerTopicMessage)
 
 	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
 
@@ -41,7 +43,7 @@ func main() {
 	conn := chat.NewConnManager(gwID)
 
 	// 3) Create gateway instance
-	g, err := chat.NewServer(gwID, routerAddr, conn)
+	g, err := chat.NewServer(gwID, routerAddr, conn, msg.MessageProducerHandler)
 	if err != nil {
 		log.Fatal(err)
 	}
