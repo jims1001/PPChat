@@ -33,6 +33,9 @@ func (s *Server) HandleWSV2(c *gin.Context) {
 
 	// 构造连接的消息
 
+	// 处理ping消息
+	// 处理连接信息
+	// 处理正常的消息
 }
 
 // HandleWS ===== WebSocket 处理（修正版） =====

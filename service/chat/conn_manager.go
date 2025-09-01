@@ -273,6 +273,30 @@ func (m *ConnManager) AddUnauth(snowID string, conn *websocket.Conn) (*WsConn, e
 	return wsConnection, nil
 }
 
+func (m *ConnManager) GetClient(conn *websocket.Conn) *WsConn {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// 1. 从 bySnow 遍历查找
+	for _, wsConn := range m.bySnow {
+		if wsConn.Conn == conn {
+			return wsConn
+		}
+	}
+
+	// 2. 从 byUser 遍历查找
+	for _, snowMap := range m.byUser {
+		for _, wsConn := range snowMap {
+			if wsConn.Conn == conn {
+				return wsConn
+			}
+		}
+	}
+
+	// 没找到
+	return nil
+}
+
 // GetUnAuthClient 获取没有授权的客户端
 func (m *ConnManager) GetUnAuthClient(snowID string) (*WsConn, error) {
 	m.mu.RLock()

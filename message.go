@@ -12,6 +12,7 @@ import (
 	"os"
 	"time"
 
+	msgcli "PProject/module/message"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -21,7 +22,7 @@ func main() {
 	global.ConfigIds()
 	global.ConfigMgo()
 	global.ConfigRedis()
-	global.ConfigKafka()
+	global.ConfigKafka(msgcli.HandlerTopicMessage)
 
 	// Initialize the RPC msg handling service
 	lis, err := net.Listen("tcp", ":50051")
