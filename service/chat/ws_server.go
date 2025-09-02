@@ -133,7 +133,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 				glog.Infof("[HandleWS] dataHandler  for message type=%d", msg.Type)
 				continue
 			}
-			
+
 			//// 提取授权负载（按你的协议）
 			//payload := msg.GetPayload()
 			//payData, aerr := ExtractAuthPayload(payload)
@@ -176,15 +176,21 @@ func (s *Server) HandleWS(c *gin.Context) {
 			//log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		} else if msg.Type == pb.MessageFrameData_DATA {
 
-			to := msg.To // 接收者
+			//to := msg.To // 接收者
 			// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic
-			glog.Info("[WS] 接收到消息  fromUser =%v toUser:%v ", msg.From, to)
 
-			WsDataChannel <- &WSConnectionMsg{
-				Frame: msg,
-				Conn:  rec,
-				Req:   msg,
+			dataHandler := s.Disp().GetHandler(msg.Type)
+			if dataHandler == nil {
+				glog.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
+				continue
 			}
+
+			err := dataHandler.Handle(&ChatContext{S: s}, msg, &WsConn{Conn: ws})
+			if err != nil {
+				glog.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
+				continue
+			}
+
 			log.Printf("[WS] 接收到消息is user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		}
 

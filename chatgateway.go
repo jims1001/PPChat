@@ -55,6 +55,7 @@ func main() {
 	g.Disp().Register(handler.NewPingHandler(chatCtx))
 	g.Disp().Register(handler.NewAuthHandler(chatCtx))
 	g.Disp().Register(handler.NewAckHandler(chatCtx))
+	g.Disp().Register(handler.NewDataHandler(chatCtx))
 	err = g.Disp().Run(chatCtx)
 	if err != nil {
 		glog.Errorf("error is %v", err)

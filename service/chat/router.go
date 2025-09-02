@@ -29,7 +29,7 @@ type Server struct {
 	disp         *Dispatcher               // 处理器
 	connMgr      *ConnManager              // connection manager
 
-	msgHandler ka.ProducerHandler
+	MsgHandler ka.ProducerHandler
 }
 
 type WSConnectionMsg struct {
@@ -65,7 +65,7 @@ func NewServer(gwID, routerAddr string, conn *ConnManager, msgHandler ka.Produce
 		incoming:   make(chan *pb.MessageFrame, 4096),
 		connMgr:    conn,
 		disp:       NewDispatcher(),
-		msgHandler: msgHandler,
+		MsgHandler: msgHandler,
 	}, nil
 }
 
@@ -82,7 +82,7 @@ func (s *Server) Disp() *Dispatcher {
 }
 
 func (s *Server) SetMsgHandler(handler ka.ProducerHandler) {
-	s.msgHandler = handler
+	s.MsgHandler = handler
 }
 
 func (s *Server) registerHandlers() {
@@ -306,9 +306,9 @@ func (s *Server) LoopData(ctx context.Context) {
 				log.Printf("[数据处理] 需要发送到数据 to data%s", string(data))
 
 				topicKey := ka.SelectTopicByUser(msg.Frame.To, ka.GenTopics())
-				if s.msgHandler != nil {
+				if s.MsgHandler != nil {
 
-					err := s.msgHandler(topicKey, msg.Frame.To, data)
+					err := s.MsgHandler(topicKey, msg.Frame.To, data)
 					if err != nil {
 						continue
 					}
