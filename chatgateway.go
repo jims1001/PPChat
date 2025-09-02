@@ -4,6 +4,7 @@ import (
 	pb "PProject/gen/gateway"
 	"PProject/global"
 	mid "PProject/middleware"
+	"PProject/module/message/handler"
 	"PProject/module/user"
 	"PProject/service/chat"
 	"log"
@@ -13,6 +14,7 @@ import (
 	msg "PProject/module/message"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang/glog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -46,6 +48,17 @@ func main() {
 	g, err := chat.NewServer(gwID, routerAddr, conn, msg.MessageProducerHandler)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	chatCtx := &chat.ChatContext{S: g}
+	g.Disp().Register(handler.NewConnectHandler(chatCtx))
+	g.Disp().Register(handler.NewPingHandler(chatCtx))
+	g.Disp().Register(handler.NewAuthHandler(chatCtx))
+	g.Disp().Register(handler.NewAckHandler(chatCtx))
+	err = g.Disp().Run(chatCtx)
+	if err != nil {
+		glog.Errorf("error is %v", err)
+		return
 	}
 
 	// 4) Start gRPC service

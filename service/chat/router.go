@@ -86,15 +86,15 @@ func (s *Server) SetMsgHandler(handler ka.ProducerHandler) {
 }
 
 func (s *Server) registerHandlers() {
-	//ctx := &Context{S: s}
-	//s.disp.Register(NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
+	//ctx := &ChatContext{S: s}
+	//s.disp.Register(handler.NewConnectHandler(ctx)) // CONN/REGISTER/UNREGISTER 相关
 	//s.disp.Register(NewAuthHandler(ctx))    // AUTH 相关
 	//s.disp.Register(NewPingHandler(ctx))
 	// s.disp.Register(NewDeliverHandler(ctx)) // 如需要
 }
 
 func (s *Server) DispatchFrame(f *pb.MessageFrameData, conn *WsConn) error {
-	return s.disp.Dispatch(&Context{S: s}, f, conn)
+	return s.disp.Dispatch(&ChatContext{S: s}, f, conn)
 }
 
 func (s *Server) RunToRouter() {

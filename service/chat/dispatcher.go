@@ -17,12 +17,19 @@ func NewDispatcher() *Dispatcher {
 
 func (d *Dispatcher) Register(h Handler) { d.handlers[h.Type()] = h }
 
-func (d *Dispatcher) Dispatch(ctx *Context, f *pb.MessageFrameData, conn *WsConn) error {
+func (d *Dispatcher) Dispatch(ctx *ChatContext, f *pb.MessageFrameData, conn *WsConn) error {
 	h, ok := d.handlers[f.GetType()]
 	if !ok {
 		return fmt.Errorf("no handler for type=%v", f.GetType())
 	}
 	return h.Handle(ctx, f, conn)
+}
+
+func (d *Dispatcher) Run(ctx *ChatContext) error {
+	for _, h := range d.handlers {
+		h.Run()
+	}
+	return nil
 }
 
 func (d *Dispatcher) GetHandler(types pb.MessageFrameData_Type) Handler {

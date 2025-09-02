@@ -3,8 +3,9 @@ package handler
 import (
 	pb "PProject/gen/message"
 	"PProject/service/chat"
-	"github.com/gorilla/websocket"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/golang/glog"
 )
@@ -21,7 +22,7 @@ const (
 )
 
 type PingHandler struct {
-	ctx  *chat.Context
+	ctx  *chat.ChatContext
 	data chan *chat.WSConnectionMsg
 }
 
@@ -33,7 +34,7 @@ func (h *PingHandler) IsHandler() bool {
 	return false
 }
 
-func NewPingHandler(ctx *chat.Context) chat.Handler {
+func NewPingHandler(ctx *chat.ChatContext) chat.Handler {
 	return &PingHandler{ctx: ctx}
 }
 
@@ -41,7 +42,7 @@ func (h *PingHandler) Type() pb.MessageFrameData_Type {
 	return pb.MessageFrameData_PING
 }
 
-func (h *PingHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat.WsConn) error {
+func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *chat.WsConn) error {
 
 	// --- 基本 Read 配置 ---
 	conn.Conn.SetReadLimit(1 << 20)
@@ -52,7 +53,6 @@ func (h *PingHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat
 
 	rec := h.ctx.S.ConnMgr().GetClient(conn.Conn)
 	// --- 写协程：唯一写者（业务 + ping + 优雅关闭） ---
-	done := make(chan struct{})
 	go func(rec *chat.WsConn) {
 		ticker := time.NewTicker(pingInterval)
 		first := time.NewTimer(firstPingDelay)
@@ -71,7 +71,6 @@ func (h *PingHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat
 
 			// 回收连接管理
 			h.ctx.S.ConnMgr().RemoveBySnow(rec.SnowID)
-			close(done)
 			glog.Infof("[PingHandler] closed snowID=%s user=%s", rec.SnowID, rec.UserId)
 		}()
 

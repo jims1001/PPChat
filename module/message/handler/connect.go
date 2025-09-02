@@ -13,15 +13,16 @@ import (
 )
 
 type ConnectHandler struct {
-	ctx  *chat.Context
-	data chan *chat.WSConnectionMsg
+	ctx    *chat.ChatContext
+	data   chan *chat.WSConnectionMsg
+	cancel context.CancelFunc
 }
 
 func (h *ConnectHandler) IsHandler() bool {
 	return false
 }
 
-func NewConnectHandler(ctx *chat.Context) chat.Handler {
+func NewConnectHandler(ctx *chat.ChatContext) chat.Handler {
 
 	conf := online.OnlineConfig{
 		NodeID:        ctx.S.ConnMgr().GwId(),
@@ -43,10 +44,10 @@ func NewConnectHandler(ctx *chat.Context) chat.Handler {
 }
 func (h *ConnectHandler) Type() pb.MessageFrameData_Type { return pb.MessageFrameData_CONN }
 
-func (h *ConnectHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat.WsConn) error {
+func (h *ConnectHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *chat.WsConn) error {
 
-	c, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	defer cancel()
+	c, _ := context.WithTimeout(context.Background(), 50*time.Second)
+	//defer cancel()
 	sessionKey, snowID, err := online.GetManager().Connect(c)
 	if err != nil {
 		glog.Errorf("[ConnectHandler] Connect (unauth) failed: %v", err)
@@ -73,19 +74,19 @@ func (h *ConnectHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *c
 
 func (h *ConnectHandler) Run() {
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	h.data = make(chan *chat.WSConnectionMsg, 8192)
-	// 如果你有 WaitGroup：
-	// s.wg.Add(1)
+
 	go func() {
-		// defer s.wg.Done()
+
+		// 不要用 defer cancel()，要不然 Run() 一返回就 cancel 了
+		ctx, cancel := context.WithCancel(context.Background())
+		h.cancel = cancel // 存到 struct，留给 Stop/Close 用
+
 		defer func() {
 			if r := recover(); r != nil {
-
 				glog.Infof("[ConnectHandler] panic recovered: %v", r)
 			}
+			h.cancel()
 		}()
 
 		marshaller := protojson.MarshalOptions{
@@ -108,13 +109,15 @@ func (h *ConnectHandler) Run() {
 				if msg == nil {
 					continue
 				}
+
 				connID := msg.Frame.GetConnId()
 				if connID == "" {
-					glog.Infof("[ConnectHandler] missing conn_id, trace_id=%s type=%v", msg.Frame.GetTraceId(), msg.Frame.GetType())
+					glog.Infof("[ConnectHandler] missing conn_id, trace_id=%s type=%v",
+						msg.Frame.GetTraceId(), msg.Frame.GetType())
 					continue
 				}
 
-				ws, err := h.ctx.S.ConnMgr().GetUnAuthClient(msg.Frame.ConnId) // (*websocket.Conn, bool)
+				ws, err := h.ctx.S.ConnMgr().GetUnAuthClient(msg.Frame.ConnId)
 				if err != nil {
 					glog.Infof("[ConnectHandler] connMgr.GetUnAuthClient error: %v", err)
 					continue
@@ -130,12 +133,12 @@ func (h *ConnectHandler) Run() {
 				// 发送（带写超时）
 				if err := chat.WriteJSONWithDeadline(ws.Conn, data, 5*time.Second); err != nil {
 					glog.Infof("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
-					// 发送失败：关闭并从管理器移除，防止死连接占用资源
 					_ = ws.Conn.Close()
 					h.ctx.S.ConnMgr().Remove(connID)
 					continue
 				}
 			}
 		}
+
 	}()
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type AckHandler struct {
-	ctx  *chat.Context
+	ctx  *chat.ChatContext
 	data chan *pb.MessageFrameData
 }
 
@@ -19,11 +19,11 @@ func (h *AckHandler) IsHandler() bool {
 	return false // 消息方面的处理 是服务端主动回复
 }
 
-func NewAckHandler(ctx *chat.Context) chat.Handler { return &AckHandler{ctx: ctx} }
+func NewAckHandler(ctx *chat.ChatContext) chat.Handler { return &AckHandler{ctx: ctx} }
 
 func (h *AckHandler) Type() pb.MessageFrameData_Type { return pb.MessageFrameData_ACK }
 
-func (h *AckHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat.WsConn) error {
+func (h *AckHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *chat.WsConn) error {
 	h.data <- f
 	return nil
 }

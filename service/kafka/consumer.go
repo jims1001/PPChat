@@ -4,8 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -181,7 +179,7 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 	defer cancel()
 	go func() {
 		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+		//signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 		<-ch
 		cancel()
 	}()

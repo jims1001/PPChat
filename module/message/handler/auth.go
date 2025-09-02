@@ -13,14 +13,16 @@ import (
 )
 
 type AuthHandler struct {
-	ctx  *chat.Context
-	data chan *chat.WSConnectionMsg
+	ctx    *chat.ChatContext
+	data   chan *chat.WSConnectionMsg
+	cancel context.CancelFunc
 }
 
 func (h *AuthHandler) Run() {
 
+	// 不要用 defer cancel()，要不然 Run() 一返回就 cancel 了
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	h.cancel = cancel // 存到 struct，留给 Stop/Close 用
 
 	h.data = make(chan *chat.WSConnectionMsg, 8192)
 
@@ -28,7 +30,7 @@ func (h *AuthHandler) Run() {
 		// defer s.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[loopConnect] panic recovered: %v", r)
+				log.Printf("[AuthHandler] panic recovered: %v", r)
 			}
 		}()
 
@@ -52,7 +54,7 @@ func (h *AuthHandler) Run() {
 				if msg == nil {
 					continue
 				}
-				connID := msg.Frame.GetConnId()
+				connID := msg.Frame.GetSessionId()
 				if connID == "" {
 					log.Printf("[AuthHandler] missing conn_id, trace_id=%s type=%v", msg.Frame.GetTraceId(), msg.Frame.GetType())
 					continue
@@ -74,7 +76,7 @@ func (h *AuthHandler) Run() {
 
 				// 发送（带写超时）
 				if err := chat.WriteJSONWithDeadline(ws, data, 5*time.Second); err != nil {
-					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					log.Printf("[AuthHandler] send failed: conn_id=%s err=%v", connID, err)
 					// 发送失败：关闭并从管理器移除，防止死连接占用资源
 					_ = ws.Close()
 					h.ctx.S.ConnMgr().Remove(connID)
@@ -89,11 +91,11 @@ func (h *AuthHandler) IsHandler() bool {
 	return true
 }
 
-func NewAuthHandler(ctx *chat.Context) chat.Handler { return &AuthHandler{ctx: ctx} }
+func NewAuthHandler(ctx *chat.ChatContext) chat.Handler { return &AuthHandler{ctx: ctx} }
 
 func (h *AuthHandler) Type() pb.MessageFrameData_Type { return pb.MessageFrameData_AUTH }
 
-func (h *AuthHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat.WsConn) error {
+func (h *AuthHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *chat.WsConn) error {
 	payload := f.GetPayload()
 	ap, err := chat.ExtractAuthPayload(payload)
 	if err != nil {
@@ -107,23 +109,25 @@ func (h *AuthHandler) Handle(_ *chat.Context, f *pb.MessageFrameData, conn *chat
 
 	// ★ FIX：Authorize 第三参传 ConnId
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	_, aerr := online.GetManager().Authorize(ctx, ap.UserID, f.GetConnId())
+	_, aerr := online.GetManager().Authorize(ctx, ap.UserID, f.GetSessionId())
 	cancel()
 	if aerr != nil && !aerr.Is(&errors.ErrorRecordIsExist) {
-		log.Printf("[AuthHandler] authorize err user=%s conn=%s: %v", ap.UserID, f.GetConnId(), aerr)
+		log.Printf("[AuthHandler] authorize err user=%s conn=%s: %v", ap.UserID, f.GetSessionId(), aerr)
 		return nil
 	}
 
-	err = h.ctx.S.ConnMgr().BindUser(f.GetConnId(), ap.UserID)
+	err = h.ctx.S.ConnMgr().BindUser(f.GetSessionId(), ap.UserID)
 	if err != nil {
 		log.Printf("[AuthHandler] bind user err: %v", err)
 	}
 
+	rec := h.ctx.S.ConnMgr().GetClient(conn.Conn)
+
 	ack := chat.BuildAuthAck(f)
 
-	h.ctx.S.AuthBound() <- &chat.WSConnectionMsg{
+	h.data <- &chat.WSConnectionMsg{
 		Frame: ack,
-		Conn:  nil,
+		Conn:  rec,
 		Req:   f,
 	}
 
