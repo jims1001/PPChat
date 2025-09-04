@@ -103,6 +103,8 @@ type RevokeModel struct {
 type MessageModel struct {
 	ID primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 
+	TenantID string `bson:"tenant_id"` // PK
+
 	// —— 标识/时间/路由 —— //
 	ClientMsgID      string      `bson:"client_msg_id,omitempty" json:"client_msg_id,omitempty"`     // 客户端生成的消息ID（幂等）
 	ServerMsgID      string      `bson:"server_msg_id"           json:"server_msg_id"`               // 服务端消息ID（全局唯一）
@@ -118,7 +120,7 @@ type MessageModel struct {
 	SenderFaceURL    string      `bson:"sender_face_url,omitempty" json:"sender_face_url,omitempty"` // 头像快照
 	GroupID          string      `bson:"group_id,omitempty"      json:"group_id,omitempty"`          // 群ID
 	ConversationID   string      `bson:"conversation_id"         json:"conversation_id"`             // 会话ID（单聊=拼接，群聊=groupID）
-	Seq              int64       `bson:"msgflow"                     json:"msgflow"`                 // 序列号（严格有序）
+	Seq              int64       `bson:"seq_num"                     json:"seq_num"`                 // 序列号（严格有序）
 	IsRead           int         `bson:"is_read,omitempty"       json:"is_read,omitempty"`           // 是否已读 (0/1)
 	Status           int         `bson:"status,omitempty"        json:"status,omitempty"`            // 状态（0=正常，1=撤回，2=删除，3=失败）
 
