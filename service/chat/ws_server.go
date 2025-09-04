@@ -16,27 +16,6 @@ import (
 
 var upgraded = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: func(r *http.Request) bool { return true }}
 
-func (s *Server) HandleWSV2(c *gin.Context) {
-
-	ws, err := upgraded.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		// 常见：非 WebSocket 请求/握手失败
-		return
-	}
-	defer func(ws *websocket.Conn) {
-		err := ws.Close()
-		if err != nil {
-			glog.Infof("[HandleWSV2] close websocket error: %v", err)
-		}
-	}(ws)
-
-	// 构造连接的消息
-
-	// 处理ping消息
-	// 处理连接信息
-	// 处理正常的消息
-}
-
 // HandleWS ===== WebSocket 处理（修正版） =====
 func (s *Server) HandleWS(c *gin.Context) {
 
@@ -51,14 +30,9 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 	if err != nil {
 		// 常见：非 WebSocket 请求/握手失败
+		glog.Infof("[HandleWSV2] upgrade websocket error: %v", err)
 		return
 	}
-
-	// ---- 常量参数（建议值） ----
-	const (
-		authTimeout       = 2 * time.Second // 从 400ms 拉长，避免偶发超时
-		readIdleAfterAuth = 2 * time.Minute
-	)
 
 	connectHandler := s.Disp().GetHandler(pb.MessageFrameData_CONN)
 	if connectHandler != nil {
@@ -134,46 +108,6 @@ func (s *Server) HandleWS(c *gin.Context) {
 				continue
 			}
 
-			//// 提取授权负载（按你的协议）
-			//payload := msg.GetPayload()
-			//payData, aerr := ExtractAuthPayload(payload)
-			//if aerr != nil {
-			//	log.Printf("[WS] ExtractAuthPayload err snowID=%s err=%v", rec.SnowID, aerr)
-			//	continue
-			//}
-			//if msg.ConnId == "" {
-			//	log.Printf("[WS] Authorize skip (empty ConnId) user=%s snowID=%s", payData.UserID, rec.SnowID)
-			//	continue
-			//}
-			//
-			//// 授权：注意第三个参数使用 ConnId（不是 SessionId）
-			//ctx, cancel := context.WithTimeout(context.Background(), authTimeout)
-			//_, authErr := online.GetManager().Authorize(ctx, payData.UserID, msg.SessionId)
-			//cancel()
-			//if authErr != nil {
-			//	if !authErr.Is(&errors.ErrorRecordIsExist) {
-			//		log.Printf("[WS] Authorize err user=%s conn=%s snowID=%s err=%v",
-			//			payData.UserID, msg.ConnId, rec.SnowID, authErr)
-			//		continue
-			//	}
-			//}
-			//// 绑定用户 → 续期在线 → 放宽读超时
-			//rec.UserId = payData.UserID
-			//err := s.connMgr.BindUser(rec.SnowID, rec.UserId)
-			//if err != nil {
-			//	continue
-			//}
-			//
-			//authAckMsg := BuildAuthAck(msg)
-			//
-			//WsAuthChannel <- &WSConnectionMsg{
-			//	Frame: authAckMsg,
-			//	Conn:  rec,
-			//	Req:   msg,
-			//}
-			//
-			//_ = ws.SetReadDeadline(time.Now().Add(readIdleAfterAuth))
-			//log.Printf("[WS] authorized user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		} else if msg.Type == pb.MessageFrameData_DATA {
 
 			//to := msg.To // 接收者

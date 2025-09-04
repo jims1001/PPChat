@@ -14,7 +14,7 @@ type SeqConversation struct {
 	// —— 可选：发号/压缩/迁移相关 ——
 	IssuedSeq int64  `bson:"issued_seq,omitempty"` // 已“预分配/发号”的最大序号（>= MaxSeq；两阶段写时用于监控缺口）
 	CompactWM int64  `bson:"compact_wm,omitempty"` // 压缩/归档安全水位（<= 可删除上界的安全检查点）
-	Epoch     int32  `bson:"epoch,omitempty"`      // 迁移/灾备切换时的纪元号；(epoch,seq) 共同保证单调性
+	Epoch     int32  `bson:"epoch,omitempty"`      // 迁移/灾备切换时的纪元号；(epoch,msgflow) 共同保证单调性
 	ShardKey  string `bson:"shard_key,omitempty"`  // 路由/分片键（多分片部署时用于定位）
 
 	// —— 仅元数据时间 ——

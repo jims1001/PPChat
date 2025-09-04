@@ -17,7 +17,6 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		return err
 	}
 	/// 写数据库
-
 	if msg.Type == pb.MessageFrameData_DATA {
 		//msg.WsRelayBound <- msg
 		err := msgcli.ReplayMsg(value)
@@ -30,16 +29,16 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		deliverMsgData, err := util.EncodeFrame(deliverMsg)
 		if err != nil {
 			glog.Infof("BuildSendSuccessAckDeliver EncodeFrame topic key :%v Replay msg error: %s", topic, err)
+			return err
 		}
 		err = msgcli.ReplayMsg(deliverMsgData)
 		if err != nil {
-			glog.Infof("BuildSendSuccessAckDeliver topic key :%v Replay msg error: %s", topic, err)
+			glog.Infof("BuildSendSuccessAckDeliverv ReplayMsg topic key :%v Replay msg error: %s", topic, err)
+			return err
 		}
-
 	}
-	
-	// 下发给自己
 
+	// 下发给自己
 	//glog.Infof("[TestTopic] key=%s, value=%s", key, value)
 	return nil
 }

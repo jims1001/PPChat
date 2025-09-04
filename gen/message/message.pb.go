@@ -339,7 +339,7 @@ type MessageData struct {
 	SenderFaceUrl    string `protobuf:"bytes,12,opt,name=sender_face_url,json=senderFaceUrl,proto3" json:"sender_face_url,omitempty"`           // 发送者头像URL（冗余快照）
 	GroupId          string `protobuf:"bytes,13,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`                               // 群ID（群聊必填；单聊可为空）
 	Content          string `protobuf:"bytes,14,opt,name=content,proto3" json:"content,omitempty"`                                              // 原始内容（纯文本或JSON；与多态Elem可并存，视业务需要）
-	Seq              int64  `protobuf:"varint,15,opt,name=seq,proto3" json:"seq,omitempty"`                                                     // 递增序列号（分区/全局序列，用于严格有序与增量同步）
+	Seq              int64  `protobuf:"varint,15,opt,name=msgflow,proto3" json:"msgflow,omitempty"`                                                     // 递增序列号（分区/全局序列，用于严格有序与增量同步）
 	IsRead           bool   `protobuf:"varint,16,opt,name=is_read,json=isRead,proto3" json:"is_read,omitempty"`                                 // 是否已读（端内缓存字段，服务端以回执为准）
 	Status           int32  `protobuf:"varint,17,opt,name=status,proto3" json:"status,omitempty"`                                               // 状态（建议枚举：0=正常，1=撤回，2=删除，3=失败...）
 	// —— 推送/扩展 —— //
@@ -996,7 +996,7 @@ type MessageRevoked struct {
 	SourceMessageSendId         string `protobuf:"bytes,7,opt,name=source_message_send_id,json=sourceMessageSendId,proto3" json:"source_message_send_id,omitempty"`                         // 原消息发送者ID
 	SourceMessageSenderNickname string `protobuf:"bytes,8,opt,name=source_message_sender_nickname,json=sourceMessageSenderNickname,proto3" json:"source_message_sender_nickname,omitempty"` // 原消息发送者昵称快照
 	SessionType                 int32  `protobuf:"varint,9,opt,name=session_type,json=sessionType,proto3" json:"session_type,omitempty"`                                                    // 会话类型
-	Seq                         int64  `protobuf:"varint,10,opt,name=seq,proto3" json:"seq,omitempty"`                                                                                      // 原消息序列号
+	Seq                         int64  `protobuf:"varint,10,opt,name=msgflow,proto3" json:"msgflow,omitempty"`                                                                                      // 原消息序列号
 	Ex                          string `protobuf:"bytes,11,opt,name=ex,proto3" json:"ex,omitempty"`                                                                                         // 扩展
 	IsAdminRevoke               bool   `protobuf:"varint,12,opt,name=is_admin_revoke,json=isAdminRevoke,proto3" json:"is_admin_revoke,omitempty"`                                           // 是否管理员/系统强制撤回
 }

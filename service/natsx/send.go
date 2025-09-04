@@ -50,6 +50,6 @@ func (c *NatsxClient) sendJS(ctx context.Context, subject string, data []byte, h
 		return fmt.Errorf("publish failed: %w", err)
 	}
 
-	fmt.Printf("Published to stream=%s seq=%d\n", ack.Stream, ack.Sequence)
+	fmt.Printf("Published to stream=%s msgflow=%d\n", ack.Stream, ack.Sequence)
 	return nil
 }

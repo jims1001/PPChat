@@ -210,7 +210,7 @@ type SendResp struct {
 	unknownFields protoimpl.UnknownFields
 
 	Ack       *message.AckData     `protobuf:"bytes,1,opt,name=ack,proto3" json:"ack,omitempty"`
-	Persisted *message.MessageData `protobuf:"bytes,2,opt,name=persisted,proto3" json:"persisted,omitempty"` // 服务端入库后的最终形态（补全 seq/server_msg_id 等）
+	Persisted *message.MessageData `protobuf:"bytes,2,opt,name=persisted,proto3" json:"persisted,omitempty"` // 服务端入库后的最终形态（补全 msgflow/server_msg_id 等）
 }
 
 func (x *SendResp) Reset() {

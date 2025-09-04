@@ -3,12 +3,10 @@ package kafka
 import (
 	"context"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/golang/glog"
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -180,10 +178,18 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
-		<-ch
-		cancel()
+		//signal.Ignored()
+		for {
+			select {
+			case <-ctx.Done():
+				glog.Infof("Consumer group stopped")
+				return
+			default:
+				// 模拟业务逻辑
+				glog.Infof("Consumer group working")
+				time.Sleep(time.Second)
+			}
+		}
 	}()
 
 	handler := &ConsumerGroupHandler{}

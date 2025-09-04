@@ -1,7 +1,10 @@
 package model
 
 import (
+	"PProject/service/mgo"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Conversation 表示用户与某个会话（单聊/群聊）的本地配置与状态
@@ -29,4 +32,12 @@ type Conversation struct {
 	IsMsgDestruct         bool      `bson:"is_msg_destruct"`          // 是否开启消息销毁（按时删除）
 	MsgDestructTime       int64     `bson:"msg_destruct_time"`        // 消息销毁时间（单位：秒，例如30s后销毁）
 	LatestMsgDestructTime time.Time `bson:"latest_msg_destruct_time"` // 最近一条消息的销毁时间点
+}
+
+func (sess *Conversation) GetTableName() string {
+	return "conversation"
+}
+
+func (sess *Conversation) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
 }
