@@ -1,106 +1,140 @@
 package msgflow
 
 import (
+	errors "PProject/tools/errs"
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 )
 
-type SeqAllocator struct {
-	rdb        redis.UniversalClient
-	db         DB
-	seqPrefix  string
-	lockPrefix string
-	lockTTL    time.Duration
-	spinWait   time.Duration
+// 段内原子发号：KEYS[1]=key; ARGV[1]=need; ARGV[2]=segEnd; ARGV[3]=nowMs
+// 返回：{0,start,0,end,nowMs} 成功；{1} notfound；{3,curr,end,0,nowMs} 用尽/不一致
+var luaInSegment = redis.NewScript(`
+  local k = KEYS[1]
+  local need = tonumber(ARGV[1])
+  local segEnd = tonumber(ARGV[2])
+  local nowms = tonumber(ARGV[3])
+
+  local curr = redis.call('HGET', k, 'curr')
+  local endv = redis.call('HGET', k, 'end')
+  if not curr or not endv then
+    return {1}
+  end
+  curr = tonumber(curr); endv = tonumber(endv)
+
+  if segEnd ~= 0 and segEnd ~= endv then
+    return {3, curr, endv, 0, nowms}
+  end
+
+  local start = curr + 1
+  local newv  = curr + need
+  if newv > endv then
+    return {3, curr, endv, 0, nowms}
+  end
+  redis.call('HSET', k, 'curr', newv, 'mill', nowms)
+  return {0, start, 0, endv, nowms}
+`)
+
+// 装载/刷新段：curr=start-1, end=end, mill=nowMs，并设置TTL
+var luaSetSegment = redis.NewScript(`
+  local k = KEYS[1]
+  local curr = tonumber(ARGV[1])
+  local endv = tonumber(ARGV[2])
+  local nowms= tonumber(ARGV[3])
+  redis.call('HSET', k, 'curr', curr, 'end', endv, 'mill', nowms)
+  redis.call('PEXPIRE', k, 3600000) -- 1h，可按需调整或动态续期
+  return 1
+`)
+
+type DAOIface interface {
+	AllocSegment(ctx context.Context, tenantID, conversationID string, block int64) (start, end int64, err error)
 }
 
-func NewSeqAllocator(rdb redis.UniversalClient, db DB) *SeqAllocator {
-	return &SeqAllocator{
-		rdb:        rdb,
-		db:         db,
-		seqPrefix:  "im:seq",
-		lockPrefix: "im:seq:init",
-		lockTTL:    10 * time.Second,
-		spinWait:   50 * time.Millisecond,
+type Allocator struct {
+	Rdb         redis.Scripter
+	DAO         DAOIface
+	BlockSizeFn func(tenantID, conversationID string, want int64) int64
+	KeyFn       func(tenantID, conversationID string) string
+	MaxRetry    int
+}
+
+func defaultBlock(_ string, _ string, want int64) int64 {
+	if want <= 0 {
+		want = 1
+	}
+	if want < 32 {
+		return 256
+	} // 冷会话小段
+	return want * 8 // 热会话放大
+}
+func defaultKey(tenant, conv string) string { return "seq:blk:" + tenant + ":" + conv }
+
+func (a *Allocator) ensure() {
+	if a.BlockSizeFn == nil {
+		a.BlockSizeFn = defaultBlock
+	}
+	if a.KeyFn == nil {
+		a.KeyFn = defaultKey
+	}
+	if a.MaxRetry == 0 {
+		a.MaxRetry = 10
 	}
 }
 
-func (a *SeqAllocator) seqKey(tenant, convID string) string {
-	return fmt.Sprintf("%s:%s:%s", a.seqPrefix, tenant, convID)
-}
-func (a *SeqAllocator) lockKey(tenant, convID string) string {
-	return fmt.Sprintf("%s:%s:%s", a.lockPrefix, tenant, convID)
-}
+// Malloc Malloc：分配 need 个连续 seq（返回起始 start，与 mill 时间戳）
+func (a *Allocator) Malloc(ctx context.Context, tenantID, conversationID string, need int64) (start int64, mill int64, err error) {
+	a.ensure()
+	if need <= 0 {
+		need = 1
+	}
+	key := a.KeyFn(tenantID, conversationID)
+	nowms := time.Now().UnixMilli()
 
-// NextSeq：若 redis 未初始化（无/0），自动创建会话→读 DB max(seq)→SET→INCR
-func (a *SeqAllocator) NextSeq(ctx context.Context, tenant, convID string) (int64, error) {
-	key := a.seqKey(tenant, convID)
-	if v, err := a.rdb.Get(ctx, key).Int64(); err == nil && v > 0 {
-		return a.rdb.Incr(ctx, key).Result()
-	}
-	if err := a.initIfNeeded(ctx, tenant, convID); err != nil {
-		return 0, err
-	}
-	return a.rdb.Incr(ctx, key).Result()
-}
-
-func (a *SeqAllocator) initIfNeeded(ctx context.Context, tenant, convID string) error {
-	key := a.seqKey(tenant, convID)
-	if v, err := a.rdb.Get(ctx, key).Int64(); err == nil && v > 0 {
-		return nil
-	}
-	// 加锁防止风暴
-	lock := a.lockKey(tenant, convID)
-	token := randToken(16)
-	ok, err := a.rdb.SetNX(ctx, lock, token, a.lockTTL).Result()
-	if err != nil {
-		return err
-	}
-	if !ok {
-		timer := time.NewTimer(a.spinWait)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return ctx.Err()
-		case <-timer.C:
+	// 1) 先尝试在现有段内发号
+	if res, e := luaInSegment.Run(ctx, a.Rdb, []string{key}, need, 0, nowms).Result(); e == nil {
+		arr := res.([]interface{})
+		switch arr[0].(int64) {
+		case 0:
+			return arr[1].(int64), arr[4].(int64), nil
+		case 1, 3:
+			// not found / exceeded -> 回源
+		default:
+			return 0, 0, errors.New("unknown redis state %v", arr[0])
 		}
-		if v, err := a.rdb.Get(ctx, key).Int64(); err == nil && v > 0 {
-			return nil
+	}
+
+	// 2) 回源 Mongo 领段 -> 写回 Redis -> 再尝试段内发号
+	var lastErr error
+	for i := 0; i < a.MaxRetry; i++ {
+		block := a.BlockSizeFn(tenantID, conversationID, need)
+
+		segStart, segEnd, e := a.DAO.AllocSegment(ctx, tenantID, conversationID, block)
+		if e != nil {
+			lastErr = e
+			break
 		}
-		return errors.New("seq init contention, retry")
-	}
-	defer func() { _ = unlock(ctx, a.rdb, lock, token) }()
 
-	// 双检
-	if v, err := a.rdb.Get(ctx, key).Int64(); err == nil && v > 0 {
-		return nil
-	}
-	// 会话存在化 + 初始化
-	if err := a.db.EnsureConversation(ctx, tenant, convID); err != nil {
-		return err
-	}
-	maxSeq, err := a.db.QueryMaxSeq(ctx, tenant, convID)
-	if err != nil {
-		return err
-	}
-	return a.rdb.Set(ctx, key, maxSeq, 0).Err()
-}
+		if _, e = luaSetSegment.Run(ctx, a.Rdb, []string{key}, segStart-1, segEnd, nowms).Result(); e != nil {
+			lastErr = e
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
 
-// 发现落后时：只升不降，矫正后 INCR 取新号
-var reconcileAndNextLua = `
-local k = KEYS[1]
-local dbMax = tonumber(ARGV[1])
-local v = redis.call('GET', k)
-if (not v) or (tonumber(v) < dbMax) then
-  redis.call('SET', k, dbMax)
-end
-return redis.call('INCR', k)
-`
-
-func (a *SeqAllocator) ReconcileAndNext(ctx context.Context, tenant, convID string, dbMax int64) (int64, error) {
-	return a.rdb.Eval(ctx, reconcileAndNextLua, []string{a.seqKey(tenant, convID)}, dbMax).Int64()
+		res2, e := luaInSegment.Run(ctx, a.Rdb, []string{key}, need, segEnd, nowms).Result()
+		if e != nil {
+			lastErr = e
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		arr := res2.([]interface{})
+		if arr[0].(int64) == 0 {
+			return arr[1].(int64), arr[4].(int64), nil
+		}
+		time.Sleep(5 * time.Millisecond) // 段冲突，小憩后重试
+	}
+	if lastErr == nil {
+		lastErr = errors.New("malloc retry exceeded")
+	}
+	return 0, 0, lastErr
 }

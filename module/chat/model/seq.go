@@ -1,6 +1,11 @@
 package model
 
-import "time"
+import (
+	"PProject/service/mgo"
+	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
 // SeqConversation 维护“某个会话消息流”的全局水位与保留范围。
 // 侧重于：已提交的最大序号、可读的最小序号（历史清理后），以及压缩/迁移等场景的元信息。
@@ -23,4 +28,12 @@ type SeqConversation struct {
 
 	// —— 预留扩展 ——
 	Ex string `bson:"ex,omitempty"` // JSON 扩展（非常见字段灰度）
+}
+
+func (sess *SeqConversation) GetTableName() string {
+	return "seq_conversation"
+}
+
+func (sess *SeqConversation) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
 }

@@ -2,26 +2,15 @@ package msgflow
 
 import (
 	"context"
-
-	"github.com/redis/go-redis/v9"
 )
 
-type IMManager struct {
-	db      DB
-	rdb     redis.UniversalClient
-	handler *Handler
-}
-
-func NewIMManager(db DB, rdb redis.UniversalClient, sidGen ServerIDGenerator) *IMManager {
-	h := NewHandler(db, rdb, sidGen) // 组合 Index + Seq + SIDGen
-	return &IMManager{
-		db:      db,
-		rdb:     rdb,
-		handler: h,
-	}
-}
-
-// 对外暴露的统一入口：发送一条消息
-func (m *IMManager) SendMessage(ctx context.Context, tenant, convID, sender, clientMsgID string, body []byte) (*MessageMeta, error) {
-	return m.handler.SaveMessage(ctx, tenant, convID, sender, clientMsgID, body)
+type SeqManager interface {
+	// 申请连续 seq（写入消息前）
+	Alloc(ctx context.Context, tenant, conv string, need int64) (start int64, mill int64, err error)
+	// 提交可读水位（消息写盘成功后推进）
+	Commit(ctx context.Context, tenant, conv string, toSeq int64) error
+	// 提升最小水位（清理历史后推进）
+	TrimMin(ctx context.Context, tenant, conv string, newMin int64) error
+	// 纠偏：把 issued 底线抬高（冷启动/Redis回退时）
+	RaiseFloor(ctx context.Context, tenant, conv string, floor int64) error
 }

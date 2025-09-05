@@ -126,3 +126,7 @@ func ConfigKafka(handler ka.MessageHandler) {
 func ConfigMiddleware() {
 	mid.Config()
 }
+
+func GetTenantID() string {
+	return "tenant_001"
+}

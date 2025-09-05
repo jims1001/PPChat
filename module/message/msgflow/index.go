@@ -1,114 +1,98 @@
 package msgflow
 
 import (
+	chatmodel "PProject/module/chat/model"
 	"context"
-	"encoding/json"
-	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// cid → sid 的幂等窗口：存 {sid, st, ph, t}
-type idxValue struct {
-	ServerMsgID string `json:"sid"`
-	Status      string `json:"st"` // PENDING | COMMITTED
-	PayloadHash string `json:"ph"`
-	CreatedAtMS int64  `json:"t"`
-}
+const ConvTypeP2P int = 100
+const ConvTypeGroup int = 200
+const convTypeChannel int = 300
 
-type ClientMsgIndex struct {
-	rdb           redis.UniversalClient
-	prefix        string
-	ttl           time.Duration
-	genSID        func() string
-	shortRollback time.Duration
-}
+// EnsureP2PForOwner
+// 语义：确保 (tenantID, ownerUserID, peerUserID, chatType) 这一条单聊会话存在；
+// - 存在：直接返回现存的 conversation_id
+// - 不存在：创建后返回新建的 conversation_id
+func EnsureP2PForOwner(
+	ctx context.Context,
+	tenantID string,
+	ownerUserID string,
+	peerUserID string,
+	chatType int32, // 建议用 int32 与 bson 对齐
+) (conversationID string, created bool, err error) {
 
-type IdxOption func(*ClientMsgIndex)
+	cov := chatmodel.Conversation{}
+	c := cov.Collection()
 
-func NewClientMsgIndex(rdb redis.UniversalClient, opts ...IdxOption) *ClientMsgIndex {
-	m := &ClientMsgIndex{
-		rdb:           rdb,
-		prefix:        "im:cid",
-		ttl:           48 * time.Hour,
-		genSID:        func() string { return uuid.NewString() },
-		shortRollback: 90 * time.Second,
+	// 规则：单聊的 ConversationID = 对端 userID（你也可以换成前缀规则）
+	conversationID = peerUserID
+
+	// 1) 先查是否已存在（按 tenant + owner + type + user_id）
+	//    如果存在，直接返回已存的 conversation_id（以数据库为准）
+	var existed struct {
+		ConversationID string `bson:"conversation_id"`
 	}
-	for _, o := range opts {
-		o(m)
+	findFilter := bson.M{
+		"tenant_id":         tenantID,
+		"owner_user_id":     ownerUserID,
+		"conversation_type": chatType,
+		"user_id":           peerUserID,
 	}
-	return m
-}
-
-func (m *ClientMsgIndex) key(tenant, sender, cid string) string {
-	return fmt.Sprintf("%s:%s:%s:%s", m.prefix, tenant, sender, cid)
-}
-
-// EnsureEx：原子占位（PENDING），若已存在返回 old
-func (m *ClientMsgIndex) EnsureEx(ctx context.Context, tenant, sender, cid, payloadHash, proposedSID string) (iv idxValue, existed bool, err error) {
-	key := m.key(tenant, sender, cid)
-	sid := proposedSID
-	if sid == "" {
-		sid = m.genSID()
+	err = c.FindOne(ctx, findFilter, options.FindOne().
+		SetProjection(bson.M{"conversation_id": 1, "_id": 0}),
+	).Decode(&existed)
+	if err == nil {
+		return existed.ConversationID, false, nil
 	}
-	now := time.Now().UnixMilli()
-	newJSON, _ := json.Marshal(idxValue{ServerMsgID: sid, Status: "PENDING", PayloadHash: payloadHash, CreatedAtMS: now})
+	if err != mongo.ErrNoDocuments {
+		return "", false, err
+	}
 
-	const lua = `
-local k   = KEYS[1]
-local vv  = redis.call('GET', k)
-if vv then return {1, vv} end
-redis.call('SET', k, ARGV[1], 'PX', ARGV[2])
-return {0, ARGV[1]}
-`
-	res, err := m.rdb.Eval(ctx, lua, []string{key}, string(newJSON), int64(m.ttl/time.Millisecond)).Result()
+	// 2) 不存在则创建（并发安全：用 upsert；filter 仍用上面的四元组）
+	now := time.Now()
+	upsertFilter := findFilter // 与查询一致，确保“同一组合”唯一命中
+	update := bson.M{
+		"$setOnInsert": bson.M{
+			"tenant_id":                tenantID,
+			"owner_user_id":            ownerUserID,
+			"conversation_type":        chatType,
+			"conversation_id":          conversationID, // 记录会话ID
+			"user_id":                  peerUserID,     // 单聊对端
+			"group_id":                 "",
+			"recv_msg_opt":             int32(0),
+			"is_pinned":                false,
+			"is_private_chat":          false,
+			"burn_duration":            int32(0),
+			"group_at_type":            int32(0),
+			"attached_info":            "",
+			"ex":                       "",
+			"max_seq":                  int64(0),
+			"min_seq":                  int64(0),
+			"create_time":              now,
+			"is_msg_destruct":          false,
+			"msg_destruct_time":        int64(0),
+			"latest_msg_destruct_time": time.Time{},
+		},
+	}
+	res, err := c.UpdateOne(ctx, upsertFilter, update, options.Update().SetUpsert(true))
 	if err != nil {
-		return iv, false, err
+		return "", false, err
 	}
-	arr := res.([]interface{})
-	flag := arr[0].(int64)
-	raw := arr[1].(string)
-	_ = json.Unmarshal([]byte(raw), &iv)
-	return iv, flag == 1, nil
-}
-
-// MarkCommitted：PENDING→COMMITTED（CAS：sid/ph）
-func (m *ClientMsgIndex) MarkCommitted(ctx context.Context, tenant, sender, cid, sid, payloadHash string) error {
-	key := m.key(tenant, sender, cid)
-	const lua = `
-local vv = redis.call('GET', KEYS[1])
-if not vv then return 0 end
-local obj = cjson.decode(vv)
-if obj["sid"] ~= ARGV[1] or obj["ph"] ~= ARGV[2] then return -1 end
-obj["st"] = "COMMITTED"
-redis.call('SET', KEYS[1], cjson.encode(obj), 'PX', ARGV[3])
-return 1
-`
-	ttl := int64(m.ttl / time.Millisecond)
-	_, err := m.rdb.Eval(ctx, lua, []string{key}, sid, payloadHash, ttl).Result()
-	return err
-}
-
-// UpdateSIDIfPending：仅在 PENDING 且 ph 一致时替换 sid（处理极小概率 sid 冲突）
-func (m *ClientMsgIndex) UpdateSIDIfPending(ctx context.Context, tenant, sender, cid, payloadHash, newSid string) error {
-	key := m.key(tenant, sender, cid)
-	const lua = `
-local vv = redis.call('GET', KEYS[1])
-if not vv then return 0 end
-local obj = cjson.decode(vv)
-if obj["st"] ~= "PENDING" or obj["ph"] ~= ARGV[2] then return -1 end
-obj["sid"] = ARGV[1]
-redis.call('SET', KEYS[1], cjson.encode(obj), 'PX', ARGV[3])
-return 1
-`
-	ttl := int64(m.ttl / time.Millisecond)
-	_, err := m.rdb.Eval(ctx, lua, []string{key}, newSid, payloadHash, ttl).Result()
-	return err
-}
-
-// RollbackShortTTL：缩短 TTL，让客户端尽快重试
-func (m *ClientMsgIndex) RollbackShortTTL(ctx context.Context, tenant, sender, cid string) error {
-	return m.rdb.PExpire(ctx, m.key(tenant, sender, cid), m.shortRollback).Err()
+	// 3) 判断是否新建。若不是新建，说明并发下被别人抢先插入了 → 再查一次拿 covID
+	if res.UpsertedCount == 0 {
+		// 并发已插入，读回 covID
+		err = c.FindOne(ctx, findFilter,
+			options.FindOne().SetProjection(bson.M{"conversation_id": 1, "_id": 0}),
+		).Decode(&existed)
+		if err != nil {
+			return "", false, err
+		}
+		return existed.ConversationID, false, nil
+	}
+	return conversationID, true, nil
 }
