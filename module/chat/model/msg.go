@@ -2,6 +2,9 @@ package model
 
 import (
 	"PProject/service/mgo"
+	"context"
+	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -96,65 +99,235 @@ type RevokeModel struct {
 	Time     int64  `bson:"time"`     // 撤回时间 (Unix ms)
 }
 
-//
+type TextElem struct {
+	Content string `bson:"content" json:"content"`
+}
+
+type PictureBaseInfo struct {
+	UUID   string `bson:"uuid,omitempty" json:"uuid,omitempty"`
+	Type   string `bson:"type,omitempty" json:"type,omitempty"`
+	Size   int64  `bson:"size,omitempty" json:"size,omitempty"`
+	Width  int32  `bson:"width,omitempty" json:"width,omitempty"`
+	Height int32  `bson:"height,omitempty" json:"height,omitempty"`
+	URL    string `bson:"url,omitempty" json:"url,omitempty"`
+}
+type PictureElem struct {
+	SourcePicture   *PictureBaseInfo `bson:"source_picture,omitempty"   json:"source_picture,omitempty"`
+	BigPicture      *PictureBaseInfo `bson:"big_picture,omitempty"      json:"big_picture,omitempty"`
+	SnapshotPicture *PictureBaseInfo `bson:"snapshot_picture,omitempty" json:"snapshot_picture,omitempty"`
+}
+
+type FileElem struct {
+	UUID      string `bson:"uuid,omitempty" json:"uuid,omitempty"`
+	SourceURL string `bson:"source_url,omitempty" json:"source_url,omitempty"`
+	FileName  string `bson:"file_name,omitempty" json:"file_name,omitempty"`
+	FileSize  int64  `bson:"file_size,omitempty" json:"file_size,omitempty"`
+	FileType  string `bson:"file_type,omitempty" json:"file_type,omitempty"`
+}
+
+type CustomElem struct {
+	Data        map[string]interface{} `bson:"data,omitempty" json:"data,omitempty"`
+	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
+	Extension   string                 `bson:"extension,omitempty"  json:"extension,omitempty"`
+}
+
+type NotificationElem struct {
+	Detail string `bson:"detail" json:"detail"` // 建议放 JSON 字符串
+}
+
+type QuoteElem struct {
+	Text         string       `bson:"text,omitempty" json:"text,omitempty"`
+	QuoteMessage *MessageLite `bson:"quote_message,omitempty" json:"quote_message,omitempty"`
+}
+type MessageLite struct {
+	ServerMsgID string      `bson:"server_msg_id,omitempty" json:"server_msg_id,omitempty"`
+	ContentType ContentType `bson:"content_type,omitempty"  json:"content_type,omitempty"`
+	TextElem    *TextElem   `bson:"text_elem,omitempty"     json:"text_elem,omitempty"`
+	SendTimeMS  int64       `bson:"send_time_ms,omitempty"  json:"send_time_ms,omitempty"`
+	SendID      string      `bson:"send_id,omitempty"       json:"send_id,omitempty"`
+	RecvID      string      `bson:"recv_id,omitempty"       json:"recv_id,omitempty"`
+	SessionType SessionType `bson:"session_type,omitempty"  json:"session_type,omitempty"`
+}
+
+// 富文本（例如链接/加粗/高亮片段）
+type AdvancedTextElem struct {
+	Text              string           `bson:"text" json:"text"`                                                   // 原文
+	MessageEntityList []*MessageEntity `bson:"message_entity_list,omitempty" json:"message_entity_list,omitempty"` // 片段实体
+}
+
+// Markdown 文本
+type MarkdownTextElem struct {
+	Content string `bson:"content" json:"content"` // Markdown 源
+}
+
+// 语音（为兼容，重复了 SoundBaseInfo 的字段）
+type SoundElem struct {
+	UUID      string `bson:"uuid,omitempty" json:"uuid,omitempty"`
+	SoundPath string `bson:"sound_path,omitempty" json:"sound_path,omitempty"`
+	SourceURL string `bson:"source_url,omitempty" json:"source_url,omitempty"`
+	DataSize  int64  `bson:"data_size,omitempty" json:"data_size,omitempty"`
+	Duration  int64  `bson:"duration,omitempty" json:"duration,omitempty"`     // 毫秒
+	SoundType string `bson:"sound_type,omitempty" json:"sound_type,omitempty"` // 编码格式（aac/amr/opus）
+}
+
+// 视频（为兼容，重复了 VideoBaseInfo 的字段）
+type VideoElem struct {
+	VideoPath      string `bson:"video_path,omitempty" json:"video_path,omitempty"`
+	VideoUUID      string `bson:"video_uuid,omitempty" json:"video_uuid,omitempty"`
+	VideoURL       string `bson:"video_url,omitempty" json:"video_url,omitempty"`
+	VideoType      string `bson:"video_type,omitempty" json:"video_type,omitempty"`
+	VideoSize      int64  `bson:"video_size,omitempty" json:"video_size,omitempty"`
+	Duration       int64  `bson:"duration,omitempty" json:"duration,omitempty"`
+	SnapshotPath   string `bson:"snapshot_path,omitempty" json:"snapshot_path,omitempty"`
+	SnapshotUUID   string `bson:"snapshot_uuid,omitempty" json:"snapshot_uuid,omitempty"`
+	SnapshotSize   int64  `bson:"snapshot_size,omitempty" json:"snapshot_size,omitempty"`
+	SnapshotURL    string `bson:"snapshot_url,omitempty" json:"snapshot_url,omitempty"`
+	SnapshotWidth  int32  `bson:"snapshot_width,omitempty" json:"snapshot_width,omitempty"`
+	SnapshotHeight int32  `bson:"snapshot_height,omitempty" json:"snapshot_height,omitempty"`
+	SnapshotType   string `bson:"snapshot_type,omitempty" json:"snapshot_type,omitempty"`
+}
+
+// 位置
+type LocationElem struct {
+	Description string  `bson:"description,omitempty" json:"description,omitempty"` // 展示文案/POI 名称
+	Longitude   float64 `bson:"longitude,omitempty" json:"longitude,omitempty"`
+	Latitude    float64 `bson:"latitude,omitempty" json:"latitude,omitempty"`
+}
+
+// 名片/用户卡片
+type CardElem struct {
+	UserID   string `bson:"user_id,omitempty" json:"user_id,omitempty"`   // 卡片所指用户ID
+	Nickname string `bson:"nickname,omitempty" json:"nickname,omitempty"` // 昵称快照
+	FaceURL  string `bson:"face_url,omitempty" json:"face_url,omitempty"` // 头像快照
+	Ex       string `bson:"ex,omitempty" json:"ex,omitempty"`             // 扩展 JSON
+}
+
+// AtTextElem @消息（文本 + @的对象）
+type AtTextElem struct {
+	Text         string       `bson:"text,omitempty" json:"text,omitempty"`
+	AtUserList   []string     `bson:"at_user_list,omitempty" json:"at_user_list,omitempty"`   // 被 @ 的 userID 列表
+	AtUsersInfo  []*AtInfo    `bson:"at_users_info,omitempty" json:"at_users_info,omitempty"` // @ 对象的昵称快照
+	QuoteMessage *MessageLite `bson:"quote_message,omitempty" json:"quote_message,omitempty"` // 可选：引用消息
+	IsAtSelf     bool         `bson:"is_at_self,omitempty" json:"is_at_self,omitempty"`       // 是否包含 @我
+}
+
+type AtInfo struct {
+	AtUserID      string `bson:"at_user_id,omitempty" json:"at_user_id,omitempty"`
+	GroupNickname string `bson:"group_nickname,omitempty" json:"group_nickname,omitempty"`
+}
+
+// FaceElem 表情/贴纸
+type FaceElem struct {
+	Index int32                  `bson:"index,omitempty" json:"index,omitempty"`
+	Data  map[string]interface{} `bson:"data,omitempty" json:"data,omitempty"` // 扩展，自定义贴纸/URL
+}
+
+// 合并转发
+type MergeElem struct {
+	Title             string           `bson:"title,omitempty" json:"title,omitempty"`                 // 合并消息标题
+	AbstractList      []string         `bson:"abstract_list,omitempty" json:"abstract_list,omitempty"` // 每条摘要
+	MultiMessage      []*MessageLite   `bson:"multi_message,omitempty" json:"multi_message,omitempty"` // 嵌入的消息快照
+	MessageEntityList []*MessageEntity `bson:"message_entity_list,omitempty" json:"message_entity_list,omitempty"`
+}
+
+// 富文本实体：用于在文本中标记片段（如超链接、加粗、@mention）
+type MessageEntity struct {
+	Type   string `bson:"type,omitempty"   json:"type,omitempty"`   // 实体类型 ("url"/"bold"/"italic"/"mention"/...)
+	Offset int32  `bson:"offset,omitempty" json:"offset,omitempty"` // 起始偏移（UTF-8 rune 或字节）
+	Length int32  `bson:"length,omitempty" json:"length,omitempty"` // 长度（同上单位）
+	URL    string `bson:"url,omitempty"    json:"url,omitempty"`    // 链接（当 type=url 时）
+	Ex     string `bson:"ex,omitempty"     json:"ex,omitempty"`     // 扩展（JSON）
+}
+
+// 离线推送配置（跨平台）
+type OfflinePushInfo struct {
+	Title string `bson:"title,omitempty" json:"title,omitempty"` // 推送标题
+	Desc  string `bson:"desc,omitempty" json:"desc,omitempty"`   // 推送正文
+	Ex    string `bson:"ex,omitempty" json:"ex,omitempty"`       // 透传扩展（JSON 字符串）
+
+	IOSBadgeCountPlus1 bool   `bson:"ios_badge_count_plus1,omitempty" json:"ios_badge_count_plus1,omitempty"` // iOS 角标是否 +1
+	IOSCategory        string `bson:"ios_category,omitempty"          json:"ios_category,omitempty"`          // iOS 通知分类
+	IosSound           string `bson:"ios_sound,omitempty"             json:"ios_sound,omitempty"`             // iOS 自定义提示音
+
+	AndroidVivoClassification bool `bson:"android_vivo_classification,omitempty" json:"android_vivo_classification,omitempty"` // vivo 分类
+}
+
 // ============================ 顶层消息模型 ============================
 //
 
 type MessageModel struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
-
-	TenantID string `bson:"tenant_id"` // PK
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
+	TenantID string             `bson:"tenant_id"`
 
 	// —— 标识/时间/路由 —— //
-	ClientMsgID      string      `bson:"client_msg_id,omitempty" json:"client_msg_id,omitempty"`     // 客户端生成的消息ID（幂等）
-	ServerMsgID      string      `bson:"server_msg_id"           json:"server_msg_id"`               // 服务端消息ID（全局唯一）
-	CreateTimeMS     int64       `bson:"create_time_ms"          json:"create_time_ms"`              // 客户端创建时间（ms）
-	SendTimeMS       int64       `bson:"send_time_ms"            json:"send_time_ms"`                // 服务端投递时间（ms，权威时间）
-	SessionType      SessionType `bson:"session_type"            json:"session_type"`                // 会话类型
-	SendID           string      `bson:"send_id"                 json:"send_id"`                     // 发送者ID
-	RecvID           string      `bson:"recv_id"                 json:"recv_id"`                     // 接收方标识（单聊=对端userID；群聊=groupID）
-	MsgFrom          MsgFrom     `bson:"msg_from"                json:"msg_from"`                    // 消息来源
-	ContentType      ContentType `bson:"content_type"            json:"content_type"`                // 内容类型
-	SenderPlatformID PlatformID  `bson:"sender_platform_id"      json:"sender_platform_id"`          // 发送端平台
-	SenderNickname   string      `bson:"sender_nickname,omitempty" json:"sender_nickname,omitempty"` // 昵称快照
-	SenderFaceURL    string      `bson:"sender_face_url,omitempty" json:"sender_face_url,omitempty"` // 头像快照
-	GroupID          string      `bson:"group_id,omitempty"      json:"group_id,omitempty"`          // 群ID
-	ConversationID   string      `bson:"conversation_id"         json:"conversation_id"`             // 会话ID（单聊=拼接，群聊=groupID）
-	Seq              int64       `bson:"seq_num"                     json:"seq_num"`                 // 序列号（严格有序）
-	IsRead           int         `bson:"is_read,omitempty"       json:"is_read,omitempty"`           // 是否已读 (0/1)
-	Status           int         `bson:"status,omitempty"        json:"status,omitempty"`            // 状态（0=正常，1=撤回，2=删除，3=失败）
+	ClientMsgID      string      `bson:"client_msg_id,omitempty" json:"client_msg_id,omitempty"`
+	ServerMsgID      string      `bson:"server_msg_id"           json:"server_msg_id"`
+	CreateTimeMS     int64       `bson:"create_time_ms"          json:"create_time_ms"`
+	SendTimeMS       int64       `bson:"send_time_ms"            json:"send_time_ms"`
+	SessionType      SessionType `bson:"session_type"            json:"session_type"`
+	SendID           string      `bson:"send_id"                 json:"send_id"`
+	RecvID           string      `bson:"recv_id"                 json:"recv_id"`
+	MsgFrom          MsgFrom     `bson:"msg_from"                json:"msg_from"`
+	ContentType      ContentType `bson:"content_type"            json:"content_type"`
+	SenderPlatformID PlatformID  `bson:"sender_platform_id"      json:"sender_platform_id"`
+	SenderNickname   string      `bson:"sender_nickname,omitempty" json:"sender_nickname,omitempty"`
+	SenderFaceURL    string      `bson:"sender_face_url,omitempty" json:"sender_face_url,omitempty"`
+	GroupID          string      `bson:"group_id,omitempty"      json:"group_id,omitempty"`
+	ConversationID   string      `bson:"conversation_id"         json:"conversation_id"`
+	Seq              int64       `bson:"seq_num"                 json:"seq_num"`
+	IsRead           int         `bson:"is_read,omitempty"       json:"is_read,omitempty"`
+	Status           int         `bson:"status,omitempty"        json:"status,omitempty"`
 
 	// —— Guild/Channel/Thread —— //
 	GuildID   string `bson:"guild_id,omitempty"   json:"guild_id,omitempty"`
 	ChannelID string `bson:"channel_id,omitempty" json:"channel_id,omitempty"`
 	ThreadID  string `bson:"thread_id,omitempty"  json:"thread_id,omitempty"`
 
-	// —— 文本/多态 Elem —— //
-	ContentText string `bson:"content_text,omitempty" json:"content_text,omitempty"` // 文本内容（轻量）
+	// —— “内容 one-of” 可选子文档 —— //
+	// 只根据 content_type 填其中一个；其余保持 nil，不会落库
+	TextElem         *TextElem         `bson:"text_elem,omitempty"          json:"text_elem,omitempty"`
+	AdvancedTextElem *AdvancedTextElem `bson:"advanced_text_elem,omitempty" json:"advanced_text_elem,omitempty"`
+	MarkdownTextElem *MarkdownTextElem `bson:"markdown_text_elem,omitempty" json:"markdown_text_elem,omitempty"`
+	PictureElem      *PictureElem      `bson:"picture_elem,omitempty"       json:"picture_elem,omitempty"`
+	SoundElem        *SoundElem        `bson:"sound_elem,omitempty"         json:"sound_elem,omitempty"`
+	VideoElem        *VideoElem        `bson:"video_elem,omitempty"         json:"video_elem,omitempty"`
+	FileElem         *FileElem         `bson:"file_elem,omitempty"          json:"file_elem,omitempty"`
+	LocationElem     *LocationElem     `bson:"location_elem,omitempty"      json:"location_elem,omitempty"`
+	CardElem         *CardElem         `bson:"card_elem,omitempty"          json:"card_elem,omitempty"`
+	AtTextElem       *AtTextElem       `bson:"at_text_elem,omitempty"       json:"at_text_elem,omitempty"`
+	FaceElem         *FaceElem         `bson:"face_elem,omitempty"          json:"face_elem,omitempty"`
+	MergeElem        *MergeElem        `bson:"merge_elem,omitempty"         json:"merge_elem,omitempty"`
+	QuoteElem        *QuoteElem        `bson:"quote_elem,omitempty"         json:"quote_elem,omitempty"`
+	CustomElem       *CustomElem       `bson:"custom_elem,omitempty"        json:"custom_elem,omitempty"`
+	NotificationElem *NotificationElem `bson:"notification_elem,omitempty"  json:"notification_elem,omitempty"`
+
+	// —— 兼容你现有的轻量文本冗余 —— //
+	ContentText string `bson:"content_text,omitempty" json:"content_text,omitempty"`
 
 	// —— 推送/扩展 —— //
-	AttachedInfo string                 `bson:"attached_info,omitempty" json:"attached_info,omitempty"` // 附加信息（透传字符串）
-	Ex           map[string]interface{} `bson:"ex,omitempty"            json:"ex,omitempty"`            // 扩展字段（业务自定义）
-	LocalEx      string                 `bson:"local_ex,omitempty"      json:"local_ex,omitempty"`      // 本地扩展（仅客户端）
+	OfflinePush  *OfflinePushInfo       `bson:"offline_push,omitempty" json:"offline_push,omitempty"`
+	AttachedInfo string                 `bson:"attached_info,omitempty" json:"attached_info,omitempty"`
+	Ex           map[string]interface{} `bson:"ex,omitempty"            json:"ex,omitempty"`
+	LocalEx      string                 `bson:"local_ex,omitempty"      json:"local_ex,omitempty"`
 
 	// —— 协作/审计 —— //
-	IsEdited     int      `bson:"is_edited,omitempty"      json:"is_edited,omitempty"`          // 是否被编辑 (0/1)
-	EditedAtMS   int64    `bson:"edited_at_ms,omitempty"   json:"edited_at_ms,omitempty"`       // 编辑时间
-	EditVersion  int32    `bson:"edit_version,omitempty"   json:"edit_version,omitempty"`       // 编辑版本号
-	ExpireAtMS   int64    `bson:"expire_at_ms,omitempty"   json:"expire_at_ms,omitempty"`       // 过期时间（ms）
-	AccessLevel  string   `bson:"access_level,omitempty"   json:"access_level,omitempty"`       // 访问级别
-	TraceID      string   `bson:"trace_id,omitempty"       json:"trace_id,omitempty"`           // 链路追踪ID
-	SessionTrace string   `bson:"session_trace_id,omitempty" json:"session_trace_id,omitempty"` // 会话审计ID
-	Tags         []string `bson:"tags,omitempty"         json:"tags,omitempty"`                 // 标签
-	ReplyTo      string   `bson:"reply_to,omitempty"     json:"reply_to,omitempty"`             // 被回复的消息ID
-	IsEphemeral  int      `bson:"is_ephemeral,omitempty" json:"is_ephemeral,omitempty"`         // 是否临时消息 (0/1)
+	IsEdited     int      `bson:"is_edited,omitempty"      json:"is_edited,omitempty"`
+	EditedAtMS   int64    `bson:"edited_at_ms,omitempty"   json:"edited_at_ms,omitempty"`
+	EditVersion  int32    `bson:"edit_version,omitempty"   json:"edit_version,omitempty"`
+	ExpireAtMS   int64    `bson:"expire_at_ms,omitempty"   json:"expire_at_ms,omitempty"`
+	AccessLevel  string   `bson:"access_level,omitempty"   json:"access_level,omitempty"`
+	TraceID      string   `bson:"trace_id,omitempty"       json:"trace_id,omitempty"`
+	SessionTrace string   `bson:"session_trace_id,omitempty" json:"session_trace_id,omitempty"`
+	Tags         []string `bson:"tags,omitempty"           json:"tags,omitempty"`
+	ReplyTo      string   `bson:"reply_to,omitempty"       json:"reply_to,omitempty"`
+	IsEphemeral  int      `bson:"is_ephemeral,omitempty"   json:"is_ephemeral,omitempty"`
 
 	// —— 富媒体复合体/自动审核 —— //
-	Rich    map[string]interface{}   `bson:"rich,omitempty"    json:"rich,omitempty"`    // 富媒体扩展
-	AutoMod []map[string]interface{} `bson:"automod,omitempty" json:"automod,omitempty"` // 自动审核信号
+	Rich    map[string]interface{}   `bson:"rich,omitempty"    json:"rich,omitempty"`
+	AutoMod []map[string]interface{} `bson:"automod,omitempty" json:"automod,omitempty"`
 
 	// —— 撤回信息（可选） —— //
-	Revoke *RevokeModel `bson:"revoke,omitempty" json:"revoke,omitempty"` // 撤回事件
+	Revoke *RevokeModel `bson:"revoke,omitempty" json:"revoke,omitempty"`
 }
 
 func (sess *MessageModel) GetTableName() string {
@@ -163,4 +336,22 @@ func (sess *MessageModel) GetTableName() string {
 
 func (sess *MessageModel) Collection() *mongo.Collection {
 	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+func InsertMessage(ctx context.Context, msg *MessageModel) error {
+
+	// 设置ID和时间
+	if msg.ID.IsZero() {
+		msg.ID = primitive.NewObjectID()
+	}
+	if msg.SendTimeMS == 0 {
+		msg.SendTimeMS = time.Now().UnixMilli()
+	}
+
+	// 插入
+	_, err := msg.Collection().InsertOne(ctx, msg)
+	if mongo.IsDuplicateKeyError(err) {
+		return fmt.Errorf("seq 已存在，拒绝重复插入: %w", err)
+	}
+	return err
 }

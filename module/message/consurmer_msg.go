@@ -10,6 +10,8 @@ import (
 	msgcli "PProject/service/msg"
 	util "PProject/tools"
 
+	chatModel "PProject/module/chat/model"
+	chatService "PProject/module/chat/service"
 	flow "PProject/module/message/msgflow"
 
 	"github.com/golang/glog"
@@ -43,8 +45,15 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		start, mill, err := alloc.Malloc(ctx, "tenant_001", convId, 1)
 		glog.Infof("topic key:%v start:%v mill:%v", topic, start, mill)
 
+		newMsg, err := chatService.BuildMessageModelFromPB("tenant_001", msg.GetPayload(), start, convId)
 		if err != nil {
-			glog.Infof("topic key:%v Parse msg error: %s", topic, err)
+			glog.Errorf("topic key:%v build msg error: %s", topic, err)
+			return err
+		}
+
+		err = chatModel.InsertMessage(ctx, newMsg)
+		if err != nil {
+			glog.Errorf("topic key:%v InsertMessage  error: %s", topic, err)
 			return err
 		}
 

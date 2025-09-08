@@ -4,9 +4,13 @@ import (
 	"PProject/service/natsx"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // 环境变量：
@@ -81,4 +85,58 @@ func RandMsgID() string {
 	var b [16]byte
 	_, _ = rand.Read(b[:])
 	return hex.EncodeToString(b[:])
+}
+
+func Nz64(v, d int64) int64 {
+	if v == 0 {
+		return d
+	}
+	return v
+}
+func Bool2i(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+func TrimPreview(s string) string {
+	s = strings.TrimSpace(s)
+	if len([]rune(s)) > 120 { // 预览截断
+		rs := []rune(s)
+		return string(rs[:120]) + "…"
+	}
+	return s
+}
+
+// AnyToMap 如果 pb 里是 google.protobuf.Struct：
+func AnyToMap(s *structpb.Struct) map[string]interface{} {
+	if s == nil {
+		return nil
+	}
+	return s.AsMap()
+}
+
+// TryParseJSONMap 如果你 md.Ex 是 JSON 字符串想解析成 map：
+func TryParseJSONMap(v string) map[string]interface{} {
+	if strings.TrimSpace(v) == "" {
+		return nil
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(v), &m); err != nil {
+		// 解析失败就保留为空，或记录日志
+		return nil
+	}
+	return m
+}
+
+func StructToJSONString(st *structpb.Struct) (string, error) {
+	return protojson.Format(st), nil
+}
+
+func AnyToJSONString(v any) (string, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }

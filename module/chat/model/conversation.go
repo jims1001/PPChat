@@ -2,9 +2,12 @@ package model
 
 import (
 	"PProject/service/mgo"
+	"context"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Conversation 表示用户与某个会话（单聊/群聊）的本地配置与状态
@@ -40,4 +43,49 @@ func (sess *Conversation) GetTableName() string {
 
 func (sess *Conversation) Collection() *mongo.Collection {
 	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+// UpdateMaxSeq 更新最大的
+func (sess *Conversation) UpdateMaxSeq(ctx context.Context, tenantID, conversationID string, newMax int64) (updated bool, err error) {
+	if newMax < 0 {
+		return false, nil
+	}
+	filter := bson.M{
+		"tenant_id":       tenantID,
+		"conversation_id": conversationID,
+		"max_seq":         bson.M{"$lt": newMax}, // 只在变大时更新，避免写放大
+	}
+	update := bson.M{
+		"$set": bson.M{"max_seq": newMax},
+	}
+	res, err := sess.Collection().UpdateOne(ctx, filter, update, options.Update())
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
+// UpdateMinSeq 更新最小的
+func (sess *Conversation) UpdateMinSeq(ctx context.Context, tenantID, conversationID string, newMin int64) (updated bool, err error) {
+	if newMin < 0 {
+		return false, nil
+	}
+	filter := bson.M{
+		"tenant_id":       tenantID,
+		"conversation_id": conversationID,
+		"min_seq":         bson.M{"$lt": newMin}, // 只在变大时更新
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"min_seq": newMin,
+		},
+		"$max": bson.M{
+			"max_seq": newMin, // 如当前 max_seq < newMin，则同步抬升，避免 min>max
+		},
+	}
+	res, err := sess.Collection().UpdateOne(ctx, filter, update, options.Update())
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
 }
