@@ -31,6 +31,9 @@ type Conversation struct {
 	MaxSeq int64 `bson:"max_seq"` // 已读最大消息序列（本地）
 	MinSeq int64 `bson:"min_seq"` // 最小已同步序列（清理历史消息时用）
 
+	// 保持同步 查询的时候 就不需要连表查询了
+	ServerMaxSeq int64 `bson:"server_max_seq,omitempty"` // 影子= SeqConversation.MaxSeq
+
 	CreateTime            time.Time `bson:"create_time"`              // 会话创建时间
 	IsMsgDestruct         bool      `bson:"is_msg_destruct"`          // 是否开启消息销毁（按时删除）
 	MsgDestructTime       int64     `bson:"msg_destruct_time"`        // 消息销毁时间（单位：秒，例如30s后销毁）

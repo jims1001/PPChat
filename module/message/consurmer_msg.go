@@ -6,6 +6,7 @@ import (
 	"PProject/service/mgo"
 	"PProject/service/storage/redis"
 	"context"
+	"fmt"
 
 	msgcli "PProject/service/msg"
 	util "PProject/tools"
@@ -28,7 +29,8 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 	/// 写数据库
 	if msg.Type == pb.MessageFrameData_DATA {
 
-		convId, _, _ := flow.EnsureP2PForOwner(ctx, "tenant_001", msg.From, msg.To, int32(flow.ConvTypeP2P))
+		convId, _, _ := flow.EnsureSeqConversation(ctx, "tenant_001", msg.From, msg.To, int32(flow.ConvTypeP2P))
+
 		glog.Infof("topic key:%v convId:%v", topic, convId)
 
 		dao := &flow.DAO{DB: mgo.GetDB()}
@@ -43,6 +45,11 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		}
 
 		start, mill, err := alloc.Malloc(ctx, "tenant_001", convId, 1)
+		_, _, err = flow.EnsureTwoSidesByKnownConvID(ctx, "tenant_001", convId, int32(flow.ConvTypeP2P), msg.From, msg.To, start)
+		if err != nil {
+			glog.Infof("topic key:%v Parse msg error: %s", topic, err)
+		}
+
 		glog.Infof("topic key:%v start:%v mill:%v", topic, start, mill)
 
 		newMsg, err := chatService.BuildMessageModelFromPB("tenant_001", msg.GetPayload(), start, convId)
@@ -55,6 +62,15 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		if err != nil {
 			glog.Errorf("topic key:%v InsertMessage  error: %s", topic, err)
 			return err
+		}
+
+		seq, err := flow.UpdateMaxSeq(ctx, convId, start)
+		if err != nil {
+			return err
+		}
+
+		if seq != start {
+			return fmt.Errorf("topic key:%v seq diff error", topic)
 		}
 
 		//msg.WsRelayBound <- msg
