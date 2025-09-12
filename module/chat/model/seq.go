@@ -7,6 +7,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+const (
+	SeqConvFieldTenantID       = "tenant_id"
+	SeqConvFieldConversationID = "conversation_id"
+	SeqConvFieldMaxSeq         = "max_seq"
+	SeqConvFieldMinSeq         = "min_seq"
+	SeqConvFieldIssuedSeq      = "issued_seq"
+	SeqConvFieldCompactWM      = "compact_wm"
+	SeqConvFieldEpoch          = "epoch"
+	SeqConvFieldShardKey       = "shard_key"
+	SeqConvFieldCreateTime     = "create_time"
+	SeqConvFieldUpdateTime     = "update_time"
+	SeqConvFieldEx             = "ex"
+)
+
 // SeqConversation 维护“某个会话消息流”的全局水位与保留范围。
 // 侧重于：已提交的最大序号、可读的最小序号（历史清理后），以及压缩/迁移等场景的元信息。
 // 注意：用户侧已读游标请放在 Conversation(用户视角) 表，不放这里。

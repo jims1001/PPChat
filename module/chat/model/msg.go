@@ -17,6 +17,79 @@ import (
 // 会话类型
 type SessionType int32
 
+// MessageModel collection field constants
+const (
+	MsgFieldID               = "_id"
+	MsgFieldTenantID         = "tenant_id"
+	MsgFieldClientMsgID      = "client_msg_id"
+	MsgFieldServerMsgID      = "server_msg_id"
+	MsgFieldCreateTimeMS     = "create_time_ms"
+	MsgFieldSendTimeMS       = "send_time_ms"
+	MsgFieldSessionType      = "session_type"
+	MsgFieldSendID           = "send_id"
+	MsgFieldRecvID           = "recv_id"
+	MsgFieldMsgFrom          = "msg_from"
+	MsgFieldContentType      = "content_type"
+	MsgFieldSenderPlatformID = "sender_platform_id"
+	MsgFieldSenderNickname   = "sender_nickname"
+	MsgFieldSenderFaceURL    = "sender_face_url"
+	MsgFieldGroupID          = "group_id"
+	MsgFieldConversationID   = "conversation_id"
+	MsgFieldSeq              = "seq_num"
+	MsgFieldIsRead           = "is_read"
+	MsgFieldStatus           = "status"
+
+	// Guild/Channel/Thread
+	MsgFieldGuildID   = "guild_id"
+	MsgFieldChannelID = "channel_id"
+	MsgFieldThreadID  = "thread_id"
+
+	// Content elements
+	MsgFieldTextElem         = "text_elem"
+	MsgFieldAdvancedTextElem = "advanced_text_elem"
+	MsgFieldMarkdownTextElem = "markdown_text_elem"
+	MsgFieldPictureElem      = "picture_elem"
+	MsgFieldSoundElem        = "sound_elem"
+	MsgFieldVideoElem        = "video_elem"
+	MsgFieldFileElem         = "file_elem"
+	MsgFieldLocationElem     = "location_elem"
+	MsgFieldCardElem         = "card_elem"
+	MsgFieldAtTextElem       = "at_text_elem"
+	MsgFieldFaceElem         = "face_elem"
+	MsgFieldMergeElem        = "merge_elem"
+	MsgFieldQuoteElem        = "quote_elem"
+	MsgFieldCustomElem       = "custom_elem"
+	MsgFieldNotificationElem = "notification_elem"
+
+	// Lightweight redundancy
+	MsgFieldContentText = "content_text"
+
+	// Push / extension
+	MsgFieldOfflinePush  = "offline_push"
+	MsgFieldAttachedInfo = "attached_info"
+	MsgFieldEx           = "ex"
+	MsgFieldLocalEx      = "local_ex"
+
+	// Collaboration / audit
+	MsgFieldIsEdited     = "is_edited"
+	MsgFieldEditedAtMS   = "edited_at_ms"
+	MsgFieldEditVersion  = "edit_version"
+	MsgFieldExpireAtMS   = "expire_at_ms"
+	MsgFieldAccessLevel  = "access_level"
+	MsgFieldTraceID      = "trace_id"
+	MsgFieldSessionTrace = "session_trace_id"
+	MsgFieldTags         = "tags"
+	MsgFieldReplyTo      = "reply_to"
+	MsgFieldIsEphemeral  = "is_ephemeral"
+
+	// Rich media / automod
+	MsgFieldRich    = "rich"
+	MsgFieldAutoMod = "automod"
+
+	// Revoke info
+	MsgFieldRevoke = "revoke"
+)
+
 const (
 	SessionTypeUnspecified SessionType = 0 // 未指定
 	SINGLE_CHAT            SessionType = 1 // 单聊

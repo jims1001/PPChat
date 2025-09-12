@@ -2,6 +2,7 @@ package message
 
 import (
 	pb "PProject/gen/message"
+	seq2 "PProject/module/chat/seq"
 	"PProject/service/chat"
 	"PProject/service/mgo"
 	"PProject/service/storage/redis"
@@ -13,7 +14,6 @@ import (
 
 	chatModel "PProject/module/chat/model"
 	chatService "PProject/module/chat/service"
-	flow "PProject/module/message/msgflow"
 
 	"github.com/golang/glog"
 )
@@ -29,13 +29,17 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 	/// 写数据库
 	if msg.Type == pb.MessageFrameData_DATA {
 
-		convId, _, _ := flow.EnsureSeqConversation(ctx, "tenant_001", msg.From, msg.To, int32(flow.ConvTypeP2P))
+		// 创建索引
+		_ = seq2.EnsureIndexes(ctx)
+		// 获取到回话ID
+		convId, _, _ := seq2.EnsureSeqConversation(ctx, "tenant_001", msg.From, msg.To, int32(seq2.ConvTypeP2P))
 
 		glog.Infof("topic key:%v convId:%v", topic, convId)
 
-		dao := &flow.DAO{DB: mgo.GetDB()}
+		dao := &seq2.DAO{DB: mgo.GetDB()}
 
-		alloc := &flow.Allocator{
+		// 分配seq
+		alloc := &seq2.Allocator{
 			Rdb: redis.GetRedis(),
 			DAO: dao,
 			// 下面两个可选，不设就用默认：
@@ -44,27 +48,31 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 			MaxRetry:    5,   // 缺段/冲突时重试次数，默认10
 		}
 
+		// 获取到seq
 		start, mill, err := alloc.Malloc(ctx, "tenant_001", convId, 1)
-		_, _, err = flow.EnsureTwoSidesByKnownConvID(ctx, "tenant_001", convId, int32(flow.ConvTypeP2P), msg.From, msg.To, start)
+		_, _, err = seq2.EnsureTwoSidesByKnownConvID(ctx, "tenant_001", convId, int32(seq2.ConvTypeP2P), msg.From, msg.To, start)
 		if err != nil {
 			glog.Infof("topic key:%v Parse msg error: %s", topic, err)
 		}
 
 		glog.Infof("topic key:%v start:%v mill:%v", topic, start, mill)
 
+		// 根据seq 插入消息
 		newMsg, err := chatService.BuildMessageModelFromPB("tenant_001", msg.GetPayload(), start, convId)
 		if err != nil {
 			glog.Errorf("topic key:%v build msg error: %s", topic, err)
 			return err
 		}
 
+		// 插入消息
 		err = chatModel.InsertMessage(ctx, newMsg)
 		if err != nil {
 			glog.Errorf("topic key:%v InsertMessage  error: %s", topic, err)
 			return err
 		}
 
-		seq, err := flow.UpdateMaxSeq(ctx, convId, start)
+		// 设置最大的seq
+		seq, err := seq2.UpdateMaxSeq(ctx, convId, start)
 		if err != nil {
 			return err
 		}

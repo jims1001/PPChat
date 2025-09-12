@@ -1,6 +1,7 @@
-package msgflow
+package seq
 
 import (
+	chatmodel "PProject/module/chat/model"
 	"context"
 	"time"
 
@@ -18,14 +19,16 @@ func (d *DAO) AllocSegment(ctx context.Context, tenantID, conversationID string,
 	if block <= 0 {
 		block = 256
 	}
-	c := d.DB.Collection(collSeqConv)
+	seq := chatmodel.SeqConversation{}
+	c := d.DB.Collection(seq.GetTableName())
 	now := time.Now()
 
-	filter := bson.M{"tenant_id": tenantID, "conversation_id": conversationID}
+	filter := bson.M{chatmodel.SeqConvFieldTenantID: tenantID,
+		chatmodel.SeqConvFieldConversationID: conversationID}
 	update := bson.M{
-		"$inc":         bson.M{"issued_seq": block},
-		"$setOnInsert": bson.M{"max_seq": int64(0), "min_seq": int64(0), "create_time": now},
-		"$set":         bson.M{"update_time": now},
+		"$inc":         bson.M{chatmodel.SeqConvFieldIssuedSeq: block},
+		"$setOnInsert": bson.M{chatmodel.SeqConvFieldMaxSeq: int64(0), chatmodel.SeqConvFieldMinSeq: int64(0), chatmodel.SeqConvFieldCreateTime: now},
+		"$set":         bson.M{chatmodel.SeqConvFieldUpdateTime: now},
 	}
 
 	var before struct {
@@ -46,10 +49,12 @@ func (d *DAO) AllocSegment(ctx context.Context, tenantID, conversationID string,
 
 // AdvanceCommit 提交可读水位：max_seq = max(max_seq, toSeq)
 func (d *DAO) AdvanceCommit(ctx context.Context, tenantID, conversationID string, toSeq int64) error {
-	c := d.DB.Collection(collSeqConv)
+	seq := chatmodel.SeqConversation{}
+	c := d.DB.Collection(seq.GetTableName())
+
 	_, err := c.UpdateOne(ctx,
-		bson.M{"tenant_id": tenantID, "conversation_id": conversationID},
-		bson.M{"$max": bson.M{"max_seq": toSeq}, "$set": bson.M{"update_time": time.Now()}},
+		bson.M{chatmodel.SeqConvFieldTenantID: tenantID, chatmodel.SeqConvFieldConversationID: conversationID},
+		bson.M{"$max": bson.M{chatmodel.SeqConvFieldMaxSeq: toSeq}, "$set": bson.M{chatmodel.SeqConvFieldUpdateTime: time.Now()}},
 		options.Update().SetUpsert(true),
 	)
 	return err
@@ -57,20 +62,29 @@ func (d *DAO) AdvanceCommit(ctx context.Context, tenantID, conversationID string
 
 // AdvanceMin 历史清理后推进 min_seq（保护：newMin <= max_seq）
 func (d *DAO) AdvanceMin(ctx context.Context, tenantID, conversationID string, newMin int64) error {
-	c := d.DB.Collection(collSeqConv)
-	cond := bson.M{"tenant_id": tenantID, "conversation_id": conversationID, "max_seq": bson.M{"$gte": newMin}}
+	seq := chatmodel.SeqConversation{}
+	c := d.DB.Collection(seq.GetTableName())
+
+	cond := bson.M{chatmodel.SeqConvFieldTenantID: tenantID,
+		chatmodel.SeqConvFieldConversationID: conversationID,
+		chatmodel.SeqConvFieldMaxSeq:         bson.M{"$gte": newMin}}
 	_, err := c.UpdateOne(ctx, cond,
-		bson.M{"$max": bson.M{"min_seq": newMin}, "$set": bson.M{"update_time": time.Now()}},
+		bson.M{"$max": bson.M{chatmodel.SeqConvFieldMinSeq: newMin},
+			"$set": bson.M{chatmodel.SeqConvFieldUpdateTime: time.Now()}},
 	)
 	return err
 }
 
 // RaiseIssuedFloor 纠偏：抬高 issued_seq 下限（Redis 回退/冷启动时）
 func (d *DAO) RaiseIssuedFloor(ctx context.Context, tenantID, conversationID string, floor int64) error {
-	c := d.DB.Collection(collSeqConv)
+	seq := chatmodel.SeqConversation{}
+	c := d.DB.Collection(seq.GetTableName())
+
 	_, err := c.UpdateOne(ctx,
-		bson.M{"tenant_id": tenantID, "conversation_id": conversationID},
-		bson.M{"$max": bson.M{"issued_seq": floor}, "$set": bson.M{"update_time": time.Now()}},
+		bson.M{chatmodel.SeqConvFieldTenantID: tenantID,
+			chatmodel.SeqConvFieldConversationID: conversationID},
+		bson.M{"$max": bson.M{chatmodel.SeqConvFieldIssuedSeq: floor},
+			"$set": bson.M{chatmodel.SeqConvFieldUpdateTime: time.Now()}},
 		options.Update().SetUpsert(true),
 	)
 	return err

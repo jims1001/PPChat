@@ -1,4 +1,4 @@
-package msgflow
+package seq
 
 import "fmt"
 
