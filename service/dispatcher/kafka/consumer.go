@@ -185,7 +185,7 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 				return
 			default:
 				// 模拟业务逻辑
-				logger.Infof("Consumer group working")
+				//logger.Infof("Consumer group working")
 				time.Sleep(time.Second)
 			}
 		}

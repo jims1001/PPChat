@@ -8,6 +8,7 @@ import (
 	"PProject/module/message/handler"
 	"PProject/module/user"
 	"PProject/service/chat"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -24,11 +25,15 @@ func main() {
 
 	// 配置生成的ids
 
+	// 配置为 网关节点
+	global.GlobalConfig.NodeType = global.NodeTypeMsgGateWay
+	global.GlobalConfig = global.MessageGatewayConfig
+
 	global.ConfigIds()
 	global.ConfigRedis()
 	global.ConfigMgo()
 	global.ConfigMiddleware()
-	global.ConfigKafka(msg.HandlerTopicMessage)
+	global.ConfigKafka()
 
 	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
 
@@ -67,7 +72,7 @@ func main() {
 
 	// 4) Start gRPC service
 	go func() {
-		lis, err := net.Listen("tcp", ":50052")
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", global.GlobalConfig.GrpcPort))
 		if err != nil {
 			logger.Errorf("gRPC listen failed: %v", err)
 		}
@@ -82,7 +87,7 @@ func main() {
 		healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 		healthServer.SetServingStatus("gateway.GatewayControl", healthpb.HealthCheckResponse_SERVING)
 
-		logger.Infof("[gRPC] Listening on :50052")
+		logger.Infof("[gRPC] Listening on :50051")
 		if err := gs.Serve(lis); err != nil {
 			logger.Errorf("gRPC server failed: %v", err)
 		}
@@ -102,8 +107,8 @@ func main() {
 	//r.POST("/check", user.HandlerCheck)
 	//r.POST("/user")
 
-	logger.Infof("[HTTP] Listening on :8080")
-	if err := r.Run(":8080"); err != nil {
+	logger.Infof("[HTTP] Listening on :%d", global.GlobalConfig.Port)
+	if err := r.Run(fmt.Sprintf(":%d", global.GlobalConfig.Port)); err != nil {
 		logger.Errorf("HTTP server failed: %v", err)
 	}
 }

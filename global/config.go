@@ -4,7 +4,7 @@ import (
 	"PProject/data/database/mgo/mongoutil"
 	"PProject/logger"
 	mid "PProject/middleware"
-	msg "PProject/module/message"
+	"PProject/module/message"
 	"PProject/service/dispatcher/kafka"
 	mgoSrv "PProject/service/mgo"
 	redis "PProject/service/storage/redis"
@@ -23,14 +23,8 @@ var GlobalConfig = AppConfig{
 	GatewayNodeId: "gateway_10",        // 节点ID
 	ReceiveTopic:  "msg_receive_topic", // 接收消息的topic
 	SendMsgTopic:  "msg_send_topic",    // 发送消息的topic
-}
-
-type AppConfig struct {
-	NodeType      string
-	GroupId       string
-	SendMsgTopic  string // 设置发送消息的topic
-	ReceiveTopic  string // 接收消息的topic
-	GatewayNodeId string // 节点的Id
+	Port:          8080,
+	GrpcPort:      50051,
 }
 
 func ConfigAll() {
@@ -92,15 +86,30 @@ func ConfigMgo() {
 }
 
 // ConfigKafka 在后台 goroutine 中启动 Kafka Client / Producer / Consumer
-func ConfigKafka(handler kafka.MessageHandler) {
+func ConfigKafka() {
+
+	// 网关的节点 就不需要接受 发送的topic 只需要管 接收的topic就可以了
+	senderCfg := kafka.MessageHandlerConfig{
+		Handler:      message.HandlerTopicMessage,
+		TopicPattern: GlobalConfig.SendMsgTopic,
+		MessageType:  kafka.MessageTypeDataSender,
+		TopicCount:   2,
+		IsConsumer:   GlobalConfig.NodeType == NodeTypeDataNode,
+	}
+
+	receiveCfgs := kafka.MessageHandlerConfig{
+		Handler:      message.HandlerTopicMessage,
+		TopicPattern: GlobalConfig.ReceiveTopic,
+		MessageType:  kafka.MessageTypeDataReceiver,
+		IsConsumer:   GlobalConfig.NodeType == NodeTypeMsgGateWay,
+		TopicCount:   2}
+
+	kafka.Cfg.GroupID = GlobalConfig.GatewayNodeId
+	kafka.Cfg.MessageConfigs = []kafka.MessageHandlerConfig{senderCfg, receiveCfgs}
+
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-
-		// 1) 生成所有大 Topic 名称
-		topics := kafka.GenTopics()
-		allTopics := append(kafka.GenTopics(), kafka.GenCAckTopic()...)
-		logger.Infof("[Kafka] allTopics=%v", allTopics)
 
 		// 2) 启动前（可选）创建 Topic
 		if kafka.Cfg.AutoCreateTopicsOnStart {
@@ -110,7 +119,7 @@ func ConfigKafka(handler kafka.MessageHandler) {
 				logger.Infof("[Kafka][ERR] create admin: %v", err)
 				return
 			}
-			if err := kafka.EnsureTopics(admin, allTopics); err != nil {
+			if err := kafka.EnsureTopics(ctx, kafka.Cfg); err != nil {
 				logger.Infof("[Kafka][ERR] ensure allTopics: %v", err)
 				_ = admin.Close()
 				return
@@ -128,12 +137,9 @@ func ConfigKafka(handler kafka.MessageHandler) {
 			return
 		}
 
-		// 4) 注册默认 handler
-		kafka.RegisterDefaultHandlers(topics, msg.HandlerTopicMessage)
-		kafka.RegisterDefaultHandlers(kafka.GenCAckTopic(), msg.HandlerCAckTopicMessage)
-
+		keys := kafka.Cfg.GetAllTopicKeys()
 		// 5) 启动 ConsumerGroup
-		_, err := kafka.BootConsumers(allTopics)
+		_, err := kafka.BootConsumers(keys)
 		if err != nil {
 			return
 		}

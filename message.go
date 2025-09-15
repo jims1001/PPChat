@@ -23,7 +23,7 @@ func main() {
 	global.ConfigIds()
 	global.ConfigMgo()
 	global.ConfigRedis()
-	global.ConfigKafka(msgcli.HandlerTopicMessage)
+	global.ConfigKafka()
 
 	// Initialize the RPC msg handling service
 	lis, err := net.Listen("tcp", ":50051")

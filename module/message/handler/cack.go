@@ -27,7 +27,8 @@ func (h *CAckHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 	// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic
 	logger.Infof("[WS] 接收到消息  MessageFrameData_CACK =%v toUser:%v ", f.From, to)
 
-	topicKey := ka.SelectCAckTopicByUser(f.To, ka.GenCAckTopic())
+	keys := ka.Cfg.GetTopicKeys(ka.MessageTypeCAck)
+	topicKey := ka.SelectCAckTopicByUser(f.To, keys)
 
 	marshaller := protojson.MarshalOptions{
 		Indent:          "",    // 美化输出
