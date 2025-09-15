@@ -23,7 +23,7 @@ import (
 func main() {
 
 	// 配置生成的ids
-	
+
 	global.ConfigIds()
 	global.ConfigRedis()
 	global.ConfigMgo()
@@ -35,7 +35,7 @@ func main() {
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
 	if gwID == "" {
-		gwID = "msg_gw-1"
+		gwID = global.GlobalConfig.GatewayNodeId
 	}
 	routerAddr := os.Getenv("ROUTER_ADDR")
 	if routerAddr == "" {

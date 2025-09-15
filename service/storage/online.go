@@ -6,6 +6,7 @@ import (
 	"PProject/tools/ids"
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -480,7 +481,7 @@ func (m *OnlineStore) ForceLogoutUser(ctx context.Context, userID string, publis
 	return keys, nil
 }
 
-// SweepAuthedUser：清理“已授权但过期”的会话（按 score<=now）。可选广播。
+// SweepAuthedUser SweepAuthedUser：清理“已授权但过期”的会话（按 score<=now）。可选广播。
 func (m *OnlineStore) SweepAuthedUser(ctx context.Context, userID string, publish bool) ([]string, error) {
 	zUser := m.userIndexKey(userID)
 	now := time.Now().Unix()
@@ -499,7 +500,7 @@ func (m *OnlineStore) SweepAuthedUser(ctx context.Context, userID string, publis
 
 // ===== 新增：查询在线状态 / 拉取会话 =====
 
-// IsOnline：判断用户是否在线，并返回在线会话数量（顺带清理过期）
+// IsOnline IsOnline：判断用户是否在线，并返回在线会话数量（顺带清理过期）
 func (m *OnlineStore) IsOnline(ctx context.Context, userID string) (online bool, count int64, err error) {
 	zUser := m.userIndexKey(userID)
 	now := time.Now().Unix()
@@ -534,7 +535,48 @@ func (m *OnlineStore) IsOnline(ctx context.Context, userID string) (online bool,
 	return flag == 1, count, nil
 }
 
-// GetActiveSessions：获取用户所有“仍有效”的会话键（顺带清理过期）
+// BatchListOnlineConns 批量查询多个用户的在线连接。返回 map[userID][]connID
+func (m *OnlineStore) BatchListOnlineConns(ctx context.Context, userIDs []string, limitPerUser int64) (map[string][]string, error) {
+	if limitPerUser <= 0 {
+		limitPerUser = 1000
+	}
+	now := strconv.FormatInt(time.Now().Unix(), 10) // 毫秒就用 UnixMilli()
+
+	// 分批 pipeline，避免一次放太多命令（64~256 合理）
+	const batch = 128
+	out := make(map[string][]string, len(userIDs))
+
+	for i := 0; i < len(userIDs); i += batch {
+		j := i + batch
+		if j > len(userIDs) {
+			j = len(userIDs)
+		}
+
+		pipe := redis2.GetRedis().Pipeline()
+		cmdList := make([]*redis.StringSliceCmd, 0, j-i)
+		idsList := userIDs[i:j]
+
+		for _, uid := range idsList {
+			key := m.userIndexKey(uid)
+			cmdList = append(cmdList, pipe.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+				Min: now, Max: "+inf", Offset: 0, Count: limitPerUser,
+			}))
+		}
+
+		if _, err := pipe.Exec(ctx); err != nil {
+			return nil, err
+		}
+		for k, uid := range idsList {
+			connList, _ := cmdList[k].Result()
+			if len(connList) > 0 {
+				out[uid] = connList
+			}
+		}
+	}
+	return out, nil
+}
+
+// GetActiveSessions GetActiveSessions：获取用户所有“仍有效”的会话键（顺带清理过期）
 func (m *OnlineStore) GetActiveSessions(ctx context.Context, userID string) ([]string, error) {
 	zUser := m.userIndexKey(userID)
 	now := time.Now().Unix()
@@ -546,7 +588,7 @@ func (m *OnlineStore) GetActiveSessions(ctx context.Context, userID string) ([]s
 	return actives, nil
 }
 
-// GetNewestSession：获取用户最新（过期时间最大）的有效会话键；不存在则返回空串
+// GetNewestSession GetNewestSession：获取用户最新（过期时间最大）的有效会话键；不存在则返回空串
 func (m *OnlineStore) GetNewestSession(ctx context.Context, userID string) (string, error) {
 	zUser := m.userIndexKey(userID)
 	now := time.Now().Unix()

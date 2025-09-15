@@ -4,7 +4,7 @@ import (
 	pb "PProject/gen/message"
 	"PProject/logger"
 	"PProject/service/chat"
-	ka "PProject/service/kafka"
+	ka "PProject/service/dispatcher/kafka"
 	"context"
 
 	"google.golang.org/protobuf/encoding/protojson"

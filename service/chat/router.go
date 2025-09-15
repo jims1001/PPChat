@@ -3,7 +3,7 @@ package chat
 import (
 	pb "PProject/gen/message"
 	"PProject/logger"
-	ka "PProject/service/kafka"
+	ka "PProject/service/dispatcher/kafka"
 	"context"
 	"fmt"
 	"time"
@@ -128,7 +128,7 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 				if msg == nil {
 					continue
 				}
-
+				
 				ws, res := s.connMgr.Get(msg.To)
 				if !res {
 					logger.Infof("[数据处理] 获取到有效的客户端   error: %v", res)

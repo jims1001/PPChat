@@ -2,7 +2,7 @@ package message
 
 import (
 	"PProject/logger"
-	ka "PProject/service/kafka"
+	ka "PProject/service/dispatcher/kafka"
 
 	"github.com/Shopify/sarama"
 )

@@ -18,6 +18,7 @@ import (
 )
 
 func HandlerTopicMessage(topic string, key, value []byte) error {
+
 	msg, err := util.DecodeFrame(value)
 	if err != nil {
 		logger.Errorf("topic key :%v Parse msg error: %s", topic, err)

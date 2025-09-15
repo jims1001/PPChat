@@ -9,6 +9,20 @@ func init() {
 }
 
 func ReplayMsg(msg []byte) error {
+
 	//return nil
 	return chat.RelayMsg(msg)
 }
+
+//// DispatchMsg 分发消息
+//func DispatchMsg(msg []byte, topicKey string) error {
+//	if global.GlobalConfig.NodeType == global.NodeTypeMsgGateWay {
+//
+//
+//		// 就直接发消息
+//		return nil
+//	} else {
+//		//return nil
+//		return chat.RelayMsg(msg)
+//	}
+//}

@@ -22,7 +22,7 @@ type AppConfig struct {
 // Cfg 默认配置（可直接改）
 var Cfg = AppConfig{
 	Brokers:                 []string{"127.0.0.1:9092"},
-	GroupID:                 "im-app-consumer-1",
+	GroupID:                 "global.GlobalConfig.GroupId",
 	TopicPattern:            "im.shard-%02d",
 	TopicCount:              2, // 改成 64/128 即可
 	PartitionsPerTopic:      8, // 单机演示

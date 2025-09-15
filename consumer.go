@@ -2,16 +2,16 @@ package main
 
 import (
 	"PProject/logger"
-	"PProject/service/kafka"
+	kafka2 "PProject/service/dispatcher/kafka"
 )
 
 func main() {
 
-	kafka.RegisterHandler("test-topic", handleTestTopic)
-	kafka.RegisterHandler("log-topic", handleLogTopic)
+	kafka2.RegisterHandler("test-topic", handleTestTopic)
+	kafka2.RegisterHandler("log-topic", handleLogTopic)
 
 	// Start consumer
-	err := kafka.StartConsumerGroup([]string{"localhost:9092"}, "my-group", []string{
+	err := kafka2.StartConsumerGroup([]string{"localhost:9092"}, "my-group", []string{
 		"test-topic",
 		"log-topic",
 	})

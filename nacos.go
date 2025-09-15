@@ -1,6 +1,7 @@
 package main
 
 import (
+	kafka2 "PProject/service/dispatcher/kafka"
 	"PProject/service/kafka"
 	"PProject/service/nacos"
 	"fmt"
@@ -62,7 +63,7 @@ func main() {
 	}
 	defer kafka.Close()
 
-	err = kafka.SendMessage("agent.user.login", "user_login", "user_id")
+	err = kafka2.SendMessage("agent.user.login", "user_login", "user_id")
 	if err != nil {
 		println(err.Error())
 	}
