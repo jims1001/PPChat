@@ -4,6 +4,18 @@ import (
 	"github.com/Shopify/sarama"
 )
 
+// MessageHandlerConfig 消息处理 通过配置不同的key进行处理
+
+type MessageHandlerConfig struct {
+	Handler                 MessageHandler
+	TopicPattern            []string
+	TopicCount              int
+	ReplicationFactor       int
+	KafkaVersion            sarama.KafkaVersion
+	AutoCreateTopicsOnStart bool
+	ConsumerInitialOffset   string
+}
+
 // AppConfig In-code 配置（不读 YAML）
 type AppConfig struct {
 	Brokers                 []string
@@ -17,6 +29,7 @@ type AppConfig struct {
 	ConsumerInitialOffset   string // newest/oldest
 	KafkaVersion            sarama.KafkaVersion
 	AutoCreateTopicsOnStart bool
+	Handlers                []MessageHandler
 }
 
 // Cfg 默认配置（可直接改）
