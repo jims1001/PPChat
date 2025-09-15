@@ -5,7 +5,10 @@ import (
 	msgModel "PProject/module/chat/model"
 	util "PProject/tools"
 	errors "PProject/tools/errs"
+	ids "PProject/tools/ids"
 	"time"
+
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 // 入口：把 pb.MessageData 转成可落库的 MessageModel
@@ -23,7 +26,7 @@ func BuildMessageModelFromPB(
 	m := &msgModel.MessageModel{
 		TenantID:         tenantID,
 		ClientMsgID:      md.GetClientMsgId(),
-		ServerMsgID:      md.GetServerMsgId(),
+		ServerMsgID:      ids.GenerateString(),
 		CreateTimeMS:     util.Nz64(md.GetCreateTime(), now),
 		SendTimeMS:       util.Nz64(md.GetSendTime(), now),
 		SessionType:      msgModel.SessionType(md.GetSessionType()),
@@ -339,4 +342,61 @@ func copyAtInfos(src []*pb.AtInfo) []*msgModel.AtInfo {
 		return nil
 	}
 	return out
+}
+
+func BuildSyncFrameConversations(userID string,
+	convList []*msgModel.Conversation,
+) (*pb.MessageFrameData, error) {
+	now := time.Now().UnixMilli()
+
+	// 转换 Conversation -> pb.Conversation
+	items := make([]*pb.Conversation, 0, len(convList))
+	for _, c := range convList {
+		if c == nil {
+			continue
+		}
+		items = append(items, &pb.Conversation{
+			TenantId:         c.TenantID,
+			OwnerUserId:      c.OwnerUserID,
+			ConversationId:   c.ConversationID,
+			ConversationType: c.ConversationType,
+			UserId:           c.UserID,
+			GroupId:          c.GroupID,
+
+			ReadSeq:       c.ReadSeq,
+			ReadOutboxSeq: c.ReadOutboxSeq,
+			LocalMaxSeq:   c.LocalMaxSeq,
+			MinSeq:        c.MinSeq,
+			ServerMaxSeq:  c.ServerMaxSeq,
+
+			MentionUnread:    c.MentionUnread,
+			MentionReadSeq:   c.MentionReadSeq,
+			PerDeviceReadSeq: c.PerDeviceReadSeq,
+
+			UpdatedAt: c.UpdatedAt.UnixMilli(),
+		})
+	}
+
+	payload := &pb.SyncConversations{Conversations: items}
+	anyPayload, err := anypb.New(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	frame := &pb.MessageFrameData{
+		Type:      pb.MessageFrameData_SYNC,
+		From:      "im_server",
+		To:        userID,
+		Ts:        now,
+		GatewayId: "", // 暂时不需要
+		ConnId:    "", //暂时不需要
+		SessionId: "", //暂时不需要
+		// SYNC 通常需要客户端 CACK
+		AckRequired: true,
+		Body: &pb.MessageFrameData_AnyPayload{
+			AnyPayload: anyPayload,
+		},
+	}
+
+	return frame, nil
 }

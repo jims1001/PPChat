@@ -3,9 +3,11 @@ package model
 import (
 	"PProject/service/mgo"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -427,4 +429,20 @@ func InsertMessage(ctx context.Context, msg *MessageModel) error {
 		return fmt.Errorf("seq 已存在，拒绝重复插入: %w", err)
 	}
 	return err
+}
+
+func GetMessageByServerMsgID(ctx context.Context, serverMsgID string) (*MessageModel, error) {
+
+	model := MessageModel{}
+	coll := model.Collection()
+	filter := bson.M{"server_msg_id": serverMsgID}
+	var msg MessageModel
+	err := coll.FindOne(ctx, filter).Decode(&msg)
+	if err != nil {
+		if errors.Is(mongo.ErrNoDocuments, err) {
+			return nil, nil // 没找到
+		}
+		return nil, err
+	}
+	return &msg, nil
 }

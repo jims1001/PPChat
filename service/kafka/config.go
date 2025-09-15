@@ -1,6 +1,8 @@
 package kafka
 
-import "github.com/Shopify/sarama"
+import (
+	"github.com/Shopify/sarama"
+)
 
 // AppConfig In-code 配置（不读 YAML）
 type AppConfig struct {
@@ -22,7 +24,21 @@ var Cfg = AppConfig{
 	Brokers:                 []string{"127.0.0.1:9092"},
 	GroupID:                 "im-app-consumer-1",
 	TopicPattern:            "im.shard-%02d",
-	TopicCount:              8, // 改成 64/128 即可
+	TopicCount:              2, // 改成 64/128 即可
+	PartitionsPerTopic:      8, // 单机演示
+	ReplicationFactor:       1, // 单机演示
+	ProducerRetries:         5,
+	ProducerCompression:     "snappy",
+	ConsumerInitialOffset:   "newest",
+	KafkaVersion:            sarama.V2_1_0_0,
+	AutoCreateTopicsOnStart: true,
+}
+
+var CAckCfg = AppConfig{
+	Brokers:                 []string{"127.0.0.1:9092"},
+	GroupID:                 "im-app-consumer-1",
+	TopicPattern:            "im.shard-client_ack-%02d",
+	TopicCount:              2, // 改成 64/128 即可
 	PartitionsPerTopic:      8, // 单机演示
 	ReplicationFactor:       1, // 单机演示
 	ProducerRetries:         5,

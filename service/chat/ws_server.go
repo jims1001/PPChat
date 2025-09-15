@@ -108,7 +108,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 				continue
 			}
 
-		} else if msg.Type == pb.MessageFrameData_DATA {
+		} else if msg.Type == pb.MessageFrameData_DATA || msg.Type == pb.MessageFrameData_CACK {
 
 			//to := msg.To // 接收者
 			// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic

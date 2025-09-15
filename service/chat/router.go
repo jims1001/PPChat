@@ -38,25 +38,6 @@ type WSConnectionMsg struct {
 	Req   *pb.MessageFrameData
 }
 
-func SendFrameJSON(conn *websocket.Conn, frame *pb.MessageFrameData) error {
-	if conn == nil {
-		return fmt.Errorf("nil websocket conn")
-	}
-
-	// 转 JSON
-	data, err := protojson.MarshalOptions{
-		Indent:          "",   // 压缩格式
-		UseEnumNumbers:  true, // 枚举输出数字（和你之前协议示例一致）
-		EmitUnpopulated: false,
-	}.Marshal(frame)
-	if err != nil {
-		return fmt.Errorf("marshal frame: %w", err)
-	}
-
-	// 发送
-	return conn.WriteMessage(websocket.TextMessage, data)
-}
-
 func NewServer(gwID, routerAddr string, conn *ConnManager, msgHandler ka.ProducerHandler) (*Server, error) {
 	return &Server{
 		gwID:       gwID,
@@ -147,11 +128,6 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 				if msg == nil {
 					continue
 				}
-				connID := msg.GetConnId()
-				if connID == "" {
-					log.Printf("[LoopRelayData 数据处理] 没有获取到连接 conn_id, trace_id=%s type=%v", msg.GetTraceId(), msg.GetType())
-					continue
-				}
 
 				ws, res := s.connMgr.Get(msg.To)
 				if !res {
@@ -162,16 +138,16 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 				// 序列化（一次性）
 				data, err := marshaller.Marshal(msg)
 				if err != nil {
-					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", connID, err)
+					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", err)
 					continue
 				}
 
 				// 发送（带写超时）
 				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
-					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", err)
 					// 发送失败：关闭并从管理器移除，防止死连接占用资源
 					_ = ws.Close()
-					s.connMgr.Remove(connID)
+					s.connMgr.Remove(msg.To)
 					continue
 				}
 			}
@@ -246,6 +222,7 @@ func (s *Server) RelayBound() chan *pb.MessageFrameData {
 }
 
 func RelayMsg(msgData []byte) error {
+
 	msgObj, err := ParseFrameJSON(msgData)
 	if err != nil {
 		return err

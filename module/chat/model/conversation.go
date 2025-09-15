@@ -3,6 +3,7 @@ package model
 import (
 	"PProject/service/mgo"
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -78,9 +79,9 @@ type Conversation struct {
 	PerDeviceReadSeq map[string]int64 `bson:"per_device_read_seq,omitempty"`
 
 	CreateTime            time.Time `bson:"create_time"`
-	UpdatedAt             int64     `bson:"updated_at"`
+	UpdatedAt             time.Time `bson:"updated_at"`
 	IsMsgDestruct         bool      `bson:"is_msg_destruct"`
-	MsgDestructTime       int64     `bson:"msg_destruct_time"`
+	MsgDestructTime       time.Time `bson:"msg_destruct_time"`
 	LatestMsgDestructTime time.Time `bson:"latest_msg_destruct_time"`
 }
 
@@ -156,4 +157,24 @@ func (sess *Conversation) UpdateMinSeq(ctx context.Context, tenantID, conversati
 		return false, err
 	}
 	return res.ModifiedCount > 0, nil
+}
+
+// GetConversationByID 根据 TenantID + ConversationID 查询
+func (sess *Conversation) GetConversationByID(ctx context.Context, tenantID, conversationID string) (*Conversation, error) {
+	coll := sess.Collection()
+
+	filter := bson.M{
+		"tenant_id":       tenantID,
+		"conversation_id": conversationID,
+	}
+
+	var conv Conversation
+	err := coll.FindOne(ctx, filter).Decode(&conv)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil // 没找到
+		}
+		return nil, err
+	}
+	return &conv, nil
 }

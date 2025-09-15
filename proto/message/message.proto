@@ -86,6 +86,37 @@ message MessageData {
 }
 
 
+// SYNC 会话信息（服务端 → 客户端）
+message SyncConversations {
+  repeated Conversation conversations = 1; // 会话列表
+}
+
+// Conversation 基础视图（对应 Mongo 里的 Conversation）
+message Conversation {
+  string tenant_id         = 1;
+  string owner_user_id     = 2;
+  string conversation_id   = 3;
+  int32  conversation_type = 4;
+  string user_id           = 5;
+  string group_id          = 6;
+
+  int64  read_seq          = 10;
+  int64  read_outbox_seq   = 11;
+  int64  local_max_seq     = 12;
+
+  int64  min_seq           = 13;
+  int64  server_max_seq    = 14;
+
+  int32  mention_unread    = 15;
+  int64  mention_read_seq  = 16;
+
+  map<string,int64> per_device_read_seq = 20;
+
+  int64  updated_at        = 30;
+}
+
+
+
 // ================== 推送/业务辅助 ==================
 // 离线推送的跨端配置（按不同手机厂商/iOS/Android 定制）
 message OfflinePushInfo {

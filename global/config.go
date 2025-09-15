@@ -78,7 +78,8 @@ func ConfigKafka(handler ka.MessageHandler) {
 
 		// 1) 生成所有大 Topic 名称
 		topics := ka.GenTopics()
-		glog.Infof("[Kafka] topics=%v", topics)
+		allTopics := append(ka.GenTopics(), ka.GenCAckTopic()...)
+		glog.Infof("[Kafka] allTopics=%v", allTopics)
 
 		// 2) 启动前（可选）创建 Topic
 		if ka.Cfg.AutoCreateTopicsOnStart {
@@ -88,8 +89,8 @@ func ConfigKafka(handler ka.MessageHandler) {
 				glog.Infof("[Kafka][ERR] create admin: %v", err)
 				return
 			}
-			if err := ka.EnsureTopics(admin, topics); err != nil {
-				glog.Infof("[Kafka][ERR] ensure topics: %v", err)
+			if err := ka.EnsureTopics(admin, allTopics); err != nil {
+				glog.Infof("[Kafka][ERR] ensure allTopics: %v", err)
 				_ = admin.Close()
 				return
 			}
@@ -108,9 +109,10 @@ func ConfigKafka(handler ka.MessageHandler) {
 
 		// 4) 注册默认 handler
 		ka.RegisterDefaultHandlers(topics, msg.HandlerTopicMessage)
+		ka.RegisterDefaultHandlers(ka.GenCAckTopic(), msg.HandlerCAckTopicMessage)
 
 		// 5) 启动 ConsumerGroup
-		_, err := ka.BootConsumers(topics)
+		_, err := ka.BootConsumers(allTopics)
 		if err != nil {
 			return
 		}
@@ -130,3 +132,63 @@ func ConfigMiddleware() {
 func GetTenantID() string {
 	return "tenant_001"
 }
+
+// 单个配置启动
+//func BootKafka(appCfg *ka.AppConfig, handler ka.MessageHandler) {
+//	go func() {
+//		ctx, cancel := context.WithCancel(context.Background())
+//		defer cancel()
+//
+//		// 1) 生成 topics
+//		topics := ka.GenTopicsWithPattern(appCfg)
+//		glog.Infof("[Kafka/%s] topics=%v", appCfg.GroupID, topics)
+//
+//		// 2) 创建 Topic（可选）
+//		if appCfg.AutoCreateTopicsOnStart {
+//			adminCfg := ka.BuildBaseConfigWith(appCfg)
+//			admin, err := sarama.NewClusterAdmin(appCfg.Brokers, adminCfg)
+//			if err != nil {
+//				glog.Errorf("[Kafka/%s][ERR] create admin: %v", appCfg.GroupID, err)
+//				return
+//			}
+//			if err := ka.EnsureTopicsWith(admin, topics, appCfg); err != nil {
+//				glog.Errorf("[Kafka/%s][ERR] ensure topics: %v", appCfg.GroupID, err)
+//				_ = admin.Close()
+//				return
+//			}
+//			_ = admin.Close()
+//		}
+//
+//		// 3) 初始化 client & producer
+//		if err, _ := ka.InitKafkaClientWith(appCfg); err != nil {
+//			glog.Errorf("[Kafka/%s][ERR] init client: %v", appCfg.GroupID, err)
+//			return
+//		}
+//		if err := ka.InitSyncProducerFromClient(); err != nil {
+//			glog.Errorf("[Kafka/%s][ERR] init producer: %v", appCfg.GroupID, err)
+//			return
+//		}
+//
+//		// 4) 注册 handler
+//		if handler != nil {
+//			ka.RegisterDefaultHandlers(topics, handler)
+//		} else {
+//			ka.RegisterDefaultHandlers(topics, msg.HandlerTopicMessage)
+//			ka.RegisterDefaultHandlers(topics, msg.HandlerCAckTopicMessage)
+//		}
+//
+//		// 5) 启动 consumer group
+//		_, err := ka.BootConsumersWith(appCfg.GroupID, topics)
+//		if err != nil {
+//			glog.Errorf("[Kafka/%s][ERR] boot consumers: %v", appCfg.GroupID, err)
+//			return
+//		}
+//
+//		// 6) 阻塞，直到 ctx.Done()
+//		<-ctx.Done()
+//		glog.Infof("[Kafka/%s] shutting down", appCfg.GroupID)
+//
+//		ka.CloseSyncProducer()
+//		ka.CloseKafkaClient()
+//	}()
+//}
