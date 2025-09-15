@@ -2,11 +2,11 @@ package handler
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	"PProject/service/chat"
 	ka "PProject/service/kafka"
 	"context"
 
-	"github.com/golang/glog"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -33,7 +33,7 @@ func (h *DataHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 
 	to := f.To // 接收者
 	// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic
-	glog.Info("[WS] 接收到消息  fromUser =%v toUser:%v ", f.From, to)
+	logger.Infof("[WS] 接收到消息  fromUser =%v toUser:%v ", f.From, to)
 
 	topicKey := ka.SelectTopicByUser(f.To, ka.GenTopics())
 
@@ -45,7 +45,7 @@ func (h *DataHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 
 	data, err := marshaller.Marshal(f)
 	if err != nil {
-		glog.Infof("[DataHandler] marshal err =%v ", err)
+		logger.Errorf("[DataHandler] marshal err =%v ", err)
 		return err
 	}
 

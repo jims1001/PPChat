@@ -1,10 +1,10 @@
 package main
 
 import (
+	"PProject/logger"
 	"PProject/service/natsx"
 	tools "PProject/tools"
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -41,7 +41,7 @@ func main() {
 	pullWait := tools.GetEnvInt("PULL_WAIT_MS", 500)
 
 	if biz == "" || subj == "" {
-		log.Fatalf("BIZ and SUBJECT are required")
+		logger.Errorf("BIZ and SUBJECT are required")
 	}
 
 	// 全局中间件：幂等（内存版；生产可替换为 Redis 版）
@@ -69,10 +69,10 @@ func main() {
 		// Push/回调
 		if err := natsx.RegisterHandler(biz, func(ctx context.Context, m natsx.NatsxMessage) error {
 			// TODO: 你的业务逻辑；这里演示打印
-			log.Printf("[recv] biz=%s subj=%s len=%d hdr=%v", biz, m.Subject, len(m.Data), m.Header)
+			logger.Infof("[recv] biz=%s subj=%s len=%d hdr=%v", biz, m.Subject, len(m.Data), m.Header)
 			return nil
 		}); err != nil {
-			log.Fatalf("register handler err: %v", err)
+			logger.Errorf("register handler err: %v", err)
 		}
 	case natsx.JetStreamPull:
 		// 拉批处理
@@ -80,17 +80,17 @@ func main() {
 		defer cancel()
 		go func() {
 			if err := natsx.PullConsume(ctx, biz, pullBatch, time.Duration(pullWait)*time.Millisecond, func(ctx context.Context, m natsx.NatsxMessage) error {
-				log.Printf("[pull] biz=%s subj=%s len=%d hdr=%v", biz, m.Subject, len(m.Data), m.Header)
+				logger.Infof("[pull] biz=%s subj=%s len=%d hdr=%v", biz, m.Subject, len(m.Data), m.Header)
 				return nil
 			}); err != nil {
-				log.Printf("pull consume err: %v", err)
+				logger.Infof("pull consume err: %v", err)
 			}
 		}()
 	default:
-		log.Fatalf("unknown MODE: %s", modeStr)
+		logger.Errorf("unknown MODE: %s", modeStr)
 	}
 
-	log.Printf("[consumer] start servers=%v biz=%s subject=%s mode=%s queue=%s durable=%s",
+	logger.Infof("[consumer] start servers=%v biz=%s subject=%s mode=%s queue=%s durable=%s",
 		servers, biz, subj, modeStr, queue, durable)
 
 	// 优雅退出
@@ -98,5 +98,5 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 	_ = natsx.StopNats()
-	log.Println("consumer exit")
+	logger.Infof("consumer exit")
 }

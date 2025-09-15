@@ -3,16 +3,17 @@ package main
 import (
 	pb "PProject/gen/message"
 	"PProject/global"
+	"PProject/logger"
 	"PProject/service/chat"
 	"PProject/service/natsx"
 	"PProject/service/rpc"
 	"PProject/service/storage"
-	"log"
 	"net"
 	"os"
 	"time"
 
 	msgcli "PProject/module/message"
+
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -27,7 +28,7 @@ func main() {
 	// Initialize the RPC msg handling service
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatal(err)
+		logger.Errorf(err)
 	}
 
 	// Initialize Redis
@@ -44,7 +45,7 @@ func main() {
 	if err := storage.InitRedis(storage.Config{
 		Addr: addr, Password: password, DB: 0,
 	}); err != nil {
-		log.Fatalf("init redis: %v", err)
+		logger.Errorf("init redis: %v", err)
 	}
 
 	manager := rpc.NewManager(rpc.Config{
@@ -83,9 +84,9 @@ func main() {
 
 	gs := grpc.NewServer()
 	pb.RegisterRouterServer(gs, chat.NewRouterService(manager))
-	log.Println("router listening :50051")
+	logger.Infof("router listening :50051")
 	if err := gs.Serve(lis); err != nil {
-		log.Fatal(err)
+		logger.Errorf(err)
 	}
 
 }

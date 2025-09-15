@@ -2,9 +2,9 @@ package main
 
 import (
 	"PProject/data/database/mgo/mongoutil"
+	"PProject/logger"
 	mgoSrv "PProject/service/mgo"
 	"context"
-	"log"
 	"time"
 )
 
@@ -45,10 +45,10 @@ func main() {
 	// 插入
 	res, err := mgoSrv.GetDB().Collection("users").InsertOne(ctx, user)
 	if err != nil {
-		log.Fatalf("insert failed: %v", err)
+		logger.Errorf("insert failed: %v", err)
 	}
 
-	log.Printf("inserted document with ID=%v", res.InsertedID)
+	logger.Infof("inserted document with ID=%v", res.InsertedID)
 
 	select {}
 

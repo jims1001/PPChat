@@ -2,12 +2,11 @@ package handler
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	chat "PProject/service/chat"
 	"context"
-	"time"
-
-	"github.com/emicklei/go-restful/v3/log"
 	"google.golang.org/protobuf/encoding/protojson"
+	"time"
 )
 
 type RelayHandler struct {
@@ -37,7 +36,7 @@ func (h *RelayHandler) Run() {
 		// defer s.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[RelayHandler] panic recovered: %v", r)
+				logger.Errorf("[RelayHandler] panic recovered: %v", r)
 			}
 		}()
 
@@ -52,12 +51,12 @@ func (h *RelayHandler) Run() {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Printf("[RelayHandler 数据处理] ctx done: %v", ctx.Err())
+				logger.Infof("[RelayHandler 数据处理] ctx done: %v", ctx.Err())
 				return
 
 			case msg, ok := <-outCh:
 				if !ok {
-					log.Printf("[RelayHandler 数据处理] 数据处理通道已经关闭")
+					logger.Infof("[RelayHandler 数据处理] 数据处理通道已经关闭")
 					return
 				}
 				if msg == nil {
@@ -66,20 +65,20 @@ func (h *RelayHandler) Run() {
 
 				ws, res := h.ctx.S.ConnMgr().Get(msg.To)
 				if !res {
-					log.Printf("[RelayHandler] 获取到有效的客户端   error: %v", res)
+					logger.Infof("[RelayHandler] 获取到有效的客户端   error: %v", res)
 					continue
 				}
 
 				// 序列化（一次性）
 				data, err := marshaller.Marshal(msg)
 				if err != nil {
-					log.Printf("[RelayHandler] 解析数据出错 failed: conn_id=%s err=%v", err)
+					logger.Errorf("[RelayHandler] 解析数据出错 failed: conn_id=%s err=%v", err)
 					continue
 				}
 
 				// 发送（带写超时）
 				if err := chat.WriteJSONWithDeadline(ws, data, 5*time.Second); err != nil {
-					log.Printf("[RelayHandler] send failed: conn_id=%s err=%v", err)
+					logger.Errorf("[RelayHandler] send failed: conn_id=%s err=%v", err)
 					// 发送失败：关闭并从管理器移除，防止死连接占用资源
 					_ = ws.Close()
 					h.ctx.S.ConnMgr().Remove(msg.To)

@@ -2,22 +2,20 @@ package message
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	chatmodel "PProject/module/chat/model"
 	"PProject/module/chat/service"
 	msgcli "PProject/service/msg"
 	util "PProject/tools"
 	"context"
-
-	"github.com/golang/glog"
 )
 
 func HandlerCAckTopicMessage(topic string, key, value []byte) error {
-
 	ctx := context.Context(context.Background())
 	defer ctx.Done()
 	msg, err := util.DecodeFrame(value)
 	if err != nil {
-		glog.Infof("topic key :%v Parse msg error: %s", topic, err)
+		logger.Errorf("topic key :%v Parse msg error: %s", topic, err)
 		return err
 	}
 
@@ -33,7 +31,7 @@ func HandlerCAckTopicMessage(topic string, key, value []byte) error {
 				if err != nil {
 					return err
 				}
-				glog.Infof("topic key :%v Update min seq:%v", topic, minSeq)
+				logger.Infof("topic key :%v Update min seq:%v", topic, minSeq)
 
 				c := chatmodel.Conversation{}
 				conv, err := c.GetConversationByID(ctx, "tenant_001", message.ConversationID)
@@ -51,7 +49,7 @@ func HandlerCAckTopicMessage(topic string, key, value []byte) error {
 
 				err = msgcli.ReplayMsg(replayMsgData)
 				if err != nil {
-					glog.Infof("topic key :%v Parse msg error: %s", topic, err)
+					logger.Errorf("topic key :%v Parse msg error: %s", topic, err)
 					return err
 				}
 
@@ -61,7 +59,7 @@ func HandlerCAckTopicMessage(topic string, key, value []byte) error {
 
 	}
 
-	glog.Infof("topic key:%v Parse msg success", msg)
+	logger.Infof("topic key:%v Parse msg success", msg)
 
 	return nil
 }

@@ -3,12 +3,12 @@ package chat
 import (
 	gateway "PProject/gen/gateway"
 	pb "PProject/gen/message"
+	"PProject/logger"
 	rpc "PProject/service/rpc"
 	"PProject/service/storage"
 	"context"
 	"encoding/base64"
 	"io"
-	"log"
 	"sync"
 	"time"
 )
@@ -50,7 +50,7 @@ func (s *RouterService) Gateway(stream pb.Router_GatewayServer) error {
 				gatewayID = "unknown-" + time.Now().Format("150405.000")
 			}
 			s.registerGateway(gatewayID, stream)
-			log.Printf("gateway connected: %s", gatewayID)
+			logger.Infof("gateway connected: %s", gatewayID)
 		}
 		s.handleFrame(gatewayID, in)
 	}
@@ -75,7 +75,7 @@ func (s *RouterService) handleFrame(gw string, f *pb.MessageFrame) {
 	case pb.MessageFrame_DATA:
 		s.handleDataFrame(f)
 	default:
-		log.Printf("unsupported frame type: %v", f.GetType())
+		logger.Infof("unsupported frame type: %v", f.GetType())
 	}
 }
 
@@ -97,7 +97,7 @@ func (s *RouterService) handleDataFrame(f *pb.MessageFrame) {
 	s.mu.RUnlock()
 
 	if tgtGW == "" || gws == nil {
-		log.Printf("target gateway or stream missing for user %s", f.GetTo())
+		logger.Infof("target gateway or stream missing for user %s", f.GetTo())
 		return
 	}
 
@@ -112,6 +112,6 @@ func (s *RouterService) handleDataFrame(f *pb.MessageFrame) {
 		Ts:      time.Now().UnixMilli(),
 	}
 	if err := s.clientManager.Send(ctx, sendFrame); err != nil {
-		log.Printf("clientManager send error: %v", err)
+		logger.Errorf("clientManager send error: %v", err)
 	}
 }

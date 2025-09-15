@@ -1,11 +1,11 @@
 package main
 
 import (
+	"PProject/logger"
 	"PProject/service/natsx"
 	"PProject/tools"
 	"context"
 	"fmt"
-	"log"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -28,7 +28,7 @@ func main() {
 	hdr := tools.ParseHdr(tools.GetEnv("HDR", ""))
 
 	if biz == "" || subj == "" {
-		log.Fatalf("BIZ and SUBJECT are required")
+		logger.Infof("BIZ and SUBJECT are required")
 	}
 
 	cfg := natsx.NatsxConfig{
@@ -37,7 +37,7 @@ func main() {
 	}
 	nm, err := natsx.NewNatsManager(cfg /* 可挂中间件 */)
 	if err != nil {
-		log.Fatal(err)
+		logger.Errorf("%v", err)
 	}
 	defer nm.Close()
 
@@ -49,7 +49,7 @@ func main() {
 		MaxAckPending: maxAck,
 	})
 	if err != nil {
-		log.Fatal(err)
+		logger.Errorf(err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -63,11 +63,11 @@ func main() {
 	defer t.Stop()
 
 	i := 0
-	log.Printf("[producer] start servers=%v biz=%s subject=%s rate=%d/s once=%v", servers, biz, subj, rate, useOnce)
+	logger.Infof("[producer] start servers=%v biz=%s subject=%s rate=%d/s once=%v", servers, biz, subj, rate, useOnce)
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("producer exit")
+			logger.Infof("producer exit")
 			return
 		case <-t.C:
 			i++
@@ -75,7 +75,7 @@ func main() {
 			if useOnce {
 				id := tools.RandMsgID() // 真实生产建议：用业务ID，如订单号/消息UUID
 				if err := nm.PublishOnce(ctx, biz, []byte(body), hdr, id); err != nil {
-					log.Printf("publish once err: %v", err)
+					logger.Errorf("publish once err: %v", err)
 				}
 			} else {
 				if err := nm.Publish(ctx, biz, []byte(body), hdr); err != nil {

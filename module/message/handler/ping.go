@@ -5,9 +5,9 @@ import (
 	"PProject/service/chat"
 	"time"
 
-	"github.com/gorilla/websocket"
+	"PProject/logger"
 
-	"github.com/golang/glog"
+	"github.com/gorilla/websocket"
 )
 
 // ---- 常量参数（建议值） ----
@@ -71,7 +71,7 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 
 			// 回收连接管理
 			h.ctx.S.ConnMgr().RemoveBySnow(rec.SnowID)
-			glog.Infof("[PingHandler] closed snowID=%s user=%s", rec.SnowID, rec.UserId)
+			logger.Infof("[PingHandler] closed snowID=%s user=%s", rec.SnowID, rec.UserId)
 		}()
 
 		// 循环处理：优先业务帧，其次首个 ping，再常规 ping
@@ -83,7 +83,7 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 				}
 				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 				if err := conn.Conn.WriteMessage(websocket.BinaryMessage, payload); err != nil {
-					glog.Errorf("[PingHandler] write payload err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					logger.Errorf("[PingHandler] write payload err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
 					return
 				}
 				// 成功写业务后，续期在线
@@ -91,14 +91,14 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 			case <-first.C: // 首次 ping
 				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 				if err := conn.Conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
-					glog.Errorf("[PingHandler] first ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					logger.Errorf("[PingHandler] first ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
 					return
 				}
 
 			case <-ticker.C: // 常规 ping
 				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 				if err := conn.Conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
-					glog.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					logger.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
 					return
 				}
 			}

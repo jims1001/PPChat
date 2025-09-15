@@ -1,8 +1,8 @@
 package main
 
 import (
+	"PProject/logger"
 	"PProject/service/kafka"
-	"log"
 )
 
 func main() {
@@ -16,16 +16,16 @@ func main() {
 		"log-topic",
 	})
 	if err != nil {
-		log.Fatalf("Kafka consumer failed: %v", err)
+		logger.Errorf("Kafka consumer failed: %v", err)
 	}
 }
 
 func handleTestTopic(topic string, key, value []byte) error {
-	log.Printf("[TestTopic] key=%s, value=%s", key, value)
+	logger.Infof("[TestTopic] key=%s, value=%s", key, value)
 	return nil
 }
 
 func handleLogTopic(topic string, key, value []byte) error {
-	log.Printf("[LogTopic] key=%s, value=%s", key, value)
+	logger.Infof("[LogTopic] key=%s, value=%s", key, value)
 	return nil
 }

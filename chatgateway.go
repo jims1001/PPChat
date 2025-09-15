@@ -3,6 +3,7 @@ package main
 import (
 	pb "PProject/gen/gateway"
 	"PProject/global"
+	"PProject/logger"
 	mid "PProject/middleware"
 	"PProject/module/message/handler"
 	"PProject/module/user"
@@ -14,7 +15,6 @@ import (
 	msg "PProject/module/message"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang/glog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
@@ -23,7 +23,7 @@ import (
 func main() {
 
 	// 配置生成的ids
-
+	
 	global.ConfigIds()
 	global.ConfigRedis()
 	global.ConfigMgo()
@@ -61,7 +61,7 @@ func main() {
 
 	err = g.Disp().Run(chatCtx)
 	if err != nil {
-		glog.Errorf("error is %v", err)
+		logger.Errorf("error is %v", err)
 		return
 	}
 
@@ -69,7 +69,7 @@ func main() {
 	go func() {
 		lis, err := net.Listen("tcp", ":50052")
 		if err != nil {
-			log.Fatalf("gRPC listen failed: %v", err)
+			logger.Errorf("gRPC listen failed: %v", err)
 		}
 		gs := grpc.NewServer()
 
@@ -82,9 +82,9 @@ func main() {
 		healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 		healthServer.SetServingStatus("gateway.GatewayControl", healthpb.HealthCheckResponse_SERVING)
 
-		log.Println("[gRPC] Listening on :50052")
+		logger.Infof("[gRPC] Listening on :50052")
 		if err := gs.Serve(lis); err != nil {
-			log.Fatalf("gRPC server failed: %v", err)
+			logger.Errorf("gRPC server failed: %v", err)
 		}
 	}()
 
@@ -102,8 +102,8 @@ func main() {
 	//r.POST("/check", user.HandlerCheck)
 	//r.POST("/user")
 
-	log.Println("[HTTP] Listening on :8080")
+	logger.Infof("[HTTP] Listening on :8080")
 	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("HTTP server failed: %v", err)
+		logger.Errorf("HTTP server failed: %v", err)
 	}
 }

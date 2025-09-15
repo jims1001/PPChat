@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"log"
+	"PProject/logger"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 var upgraded = websocket.Upgrader{
@@ -17,7 +18,7 @@ var upgraded = websocket.Upgrader{
 func wsEcho(c *gin.Context) {
 	conn, err := upgraded.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println("upgrade:", err)
+		logger.Errorf("upgrade:", err)
 		return
 	}
 	defer func(conn *websocket.Conn) {
@@ -53,12 +54,12 @@ func wsEcho(c *gin.Context) {
 	for {
 		mt, msg, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			logger.Errorf("read:", err)
 			return
 		}
 
 		if err := conn.WriteMessage(mt, msg); err != nil {
-			log.Println("write:", err)
+			logger.Errorf("write:", err)
 			return
 		}
 	}

@@ -2,6 +2,7 @@ package message
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	seq2 "PProject/module/chat/seq"
 	"PProject/service/chat"
 	"PProject/service/mgo"
@@ -14,14 +15,12 @@ import (
 
 	chatModel "PProject/module/chat/model"
 	chatService "PProject/module/chat/service"
-
-	"github.com/golang/glog"
 )
 
 func HandlerTopicMessage(topic string, key, value []byte) error {
 	msg, err := util.DecodeFrame(value)
 	if err != nil {
-		glog.Infof("topic key :%v Parse msg error: %s", topic, err)
+		logger.Errorf("topic key :%v Parse msg error: %s", topic, err)
 		return err
 	}
 
@@ -34,7 +33,7 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		// 获取到回话ID
 		convId, _, _ := seq2.EnsureSeqConversation(ctx, "tenant_001", msg.From, msg.To, int32(seq2.ConvTypeP2P))
 
-		glog.Infof("topic key:%v convId:%v", topic, convId)
+		logger.Infof("topic key:%v convId:%v", topic, convId)
 
 		dao := &seq2.DAO{DB: mgo.GetDB()}
 
@@ -52,22 +51,22 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		start, mill, err := alloc.Malloc(ctx, "tenant_001", convId, 1)
 		_, _, err = seq2.EnsureTwoSidesByKnownConvID(ctx, "tenant_001", convId, int32(seq2.ConvTypeP2P), msg.From, msg.To, start)
 		if err != nil {
-			glog.Infof("topic key:%v Parse msg error: %s", topic, err)
+			logger.Errorf("topic key:%v Parse msg error: %s", topic, err)
 		}
 
-		glog.Infof("topic key:%v start:%v mill:%v", topic, start, mill)
+		logger.Infof("topic key:%v start:%v mill:%v", topic, start, mill)
 
 		// 根据seq 插入消息
 		newMsg, err := chatService.BuildMessageModelFromPB("tenant_001", msg.GetPayload(), start, convId)
 		if err != nil {
-			glog.Errorf("topic key:%v build msg error: %s", topic, err)
+			logger.Errorf("topic key:%v build msg error: %s", topic, err)
 			return err
 		}
 
 		// 插入消息
 		err = chatModel.InsertMessage(ctx, newMsg)
 		if err != nil {
-			glog.Errorf("topic key:%v InsertMessage  error: %s", topic, err)
+			logger.Errorf("topic key:%v InsertMessage  error: %s", topic, err)
 			return err
 		}
 
@@ -78,30 +77,30 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 		}
 
 		if seq != start {
+			logger.Errorf("topic key:%v UpdateMaxSeq  error: %s", topic, err)
 			return fmt.Errorf("topic key:%v seq diff error", topic)
 		}
 
 		//msg.WsRelayBound <- msg
 		err = msgcli.ReplayMsg(value)
 		if err != nil {
-			glog.Infof("topic key :%v Replay msg error: %s", topic, err)
+			logger.Infof("topic key :%v Replay msg error: %s", topic, err)
 			return err
 		}
 
 		deliverMsg := chat.BuildSendSuccessAckDeliver(msg.From, msg.GetPayload().ClientMsgId, msg.GetPayload().ServerMsgId, msg)
 		deliverMsgData, err := util.EncodeFrame(deliverMsg)
 		if err != nil {
-			glog.Infof("BuildSendSuccessAckDeliver EncodeFrame topic key :%v Replay msg error: %s", topic, err)
+			logger.Errorf("BuildSendSuccessAckDeliver EncodeFrame topic key :%v Replay msg error: %s", topic, err)
 			return err
 		}
 		err = msgcli.ReplayMsg(deliverMsgData)
 		if err != nil {
-			glog.Infof("BuildSendSuccessAckDeliverv ReplayMsg topic key :%v Replay msg error: %s", topic, err)
+			logger.Errorf("BuildSendSuccessAckDeliverv ReplayMsg topic key :%v Replay msg error: %s", topic, err)
 			return err
 		}
 	}
 
 	// 下发给自己
-	//glog.Infof("[TestTopic] key=%s, value=%s", key, value)
 	return nil
 }

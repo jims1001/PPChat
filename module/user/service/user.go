@@ -3,6 +3,7 @@ package service
 import (
 	config "PProject/global"
 	global "PProject/global"
+	"PProject/logger"
 	usermodel "PProject/module/user/model"
 	"PProject/service/mgo"
 	"PProject/service/storage/redis"
@@ -11,7 +12,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -228,14 +228,14 @@ func ReLoginArchiveAndReplace(ctx context.Context,
 		options.Replace().SetUpsert(true),
 	)
 
-	log.Printf("matched=%d modified=%d upserted=%v err=%v", res.MatchedCount, res.ModifiedCount, res.UpsertedID, repErr)
+	logger.Infof("matched=%d modified=%d upserted=%v err=%v", res.MatchedCount, res.ModifiedCount, res.UpsertedID, repErr)
 
 	// 同一 ctx/sc 下读回去确认
 	var x usermodel.UserSession
 	_ = coll.FindOne(ctx, bson.M{
 		"user_id": key.UserId, "device_type": key.DeviceType, "device_id": key.DeviceID,
 	}).Decode(&x)
-	log.Printf("after replace: sid=%s valid=%v exp=%v update=%v", x.SessionID, x.IsValid, x.ExpireTime, x.UpdateTime)
+	logger.Infof("after replace: sid=%s valid=%v exp=%v update=%v", x.SessionID, x.IsValid, x.ExpireTime, x.UpdateTime)
 
 	if repErr != nil {
 		return repErr

@@ -2,13 +2,14 @@ package handler
 
 import (
 	pb "PProject/gen/message"
+
+	"PProject/logger"
 	"PProject/service/chat"
 	online "PProject/service/storage"
 	errors "PProject/tools/errs"
 	"context"
 	"time"
 
-	"github.com/golang/glog"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -50,17 +51,17 @@ func (h *ConnectHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, con
 	//defer cancel()
 	sessionKey, snowID, err := online.GetManager().Connect(c)
 	if err != nil {
-		glog.Errorf("[ConnectHandler] Connect (unauth) failed: %v", err)
+		logger.Errorf("[ConnectHandler] Connect (unauth) failed: %v", err)
 		_ = conn.Conn.Close()
 		return &errors.ErrInternalServer
 	}
 
-	glog.Infof("[ConnectHandler] new unauth conn snowID=%s sessionKey=%s", snowID, sessionKey)
+	logger.Infof("[ConnectHandler] new unauth conn snowID=%s sessionKey=%s", snowID, sessionKey)
 
 	// 交给连接管理器登记（未授权）
 	rec, err := h.ctx.S.ConnMgr().AddUnauth(snowID, conn.Conn)
 	if err != nil {
-		glog.Errorf("[ConnectHandler] ConnMgr.AddUnauth failed: %v", err)
+		logger.Errorf("[ConnectHandler] ConnMgr.AddUnauth failed: %v", err)
 		_ = conn.Conn.Close()
 		return &errors.ErrInternalServer
 	}
@@ -84,7 +85,7 @@ func (h *ConnectHandler) Run() {
 
 		defer func() {
 			if r := recover(); r != nil {
-				glog.Infof("[ConnectHandler] panic recovered: %v", r)
+				logger.Errorf("[ConnectHandler] panic recovered: %v", r)
 			}
 			h.cancel()
 		}()
@@ -98,12 +99,12 @@ func (h *ConnectHandler) Run() {
 		for {
 			select {
 			case <-ctx.Done():
-				glog.Infof("[ConnectHandler] ctx done: %v", ctx.Err())
+				logger.Infof("[ConnectHandler] ctx done: %v", ctx.Err())
 				return
 
 			case msg, ok := <-h.data:
 				if !ok {
-					glog.Infof("[ConnectHandler] outbound channel closed")
+					logger.Infof("[ConnectHandler] outbound channel closed")
 					return
 				}
 				if msg == nil {
@@ -112,27 +113,27 @@ func (h *ConnectHandler) Run() {
 
 				connID := msg.Frame.GetConnId()
 				if connID == "" {
-					glog.Infof("[ConnectHandler] missing conn_id, trace_id=%s type=%v",
+					logger.Infof("[ConnectHandler] missing conn_id, trace_id=%s type=%v",
 						msg.Frame.GetTraceId(), msg.Frame.GetType())
 					continue
 				}
 
 				ws, err := h.ctx.S.ConnMgr().GetUnAuthClient(msg.Frame.ConnId)
 				if err != nil {
-					glog.Infof("[ConnectHandler] connMgr.GetUnAuthClient error: %v", err)
+					logger.Infof("[ConnectHandler] connMgr.GetUnAuthClient error: %v", err)
 					continue
 				}
 
 				// 序列化（一次性）
 				data, err := marshaller.Marshal(msg.Frame)
 				if err != nil {
-					glog.Infof("[ConnectHandler] marshal frame failed: conn_id=%s err=%v", connID, err)
+					logger.Infof("[ConnectHandler] marshal frame failed: conn_id=%s err=%v", connID, err)
 					continue
 				}
 
 				// 发送（带写超时）
 				if err := chat.WriteJSONWithDeadline(ws.Conn, data, 5*time.Second); err != nil {
-					glog.Infof("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
+					logger.Infof("[loopConnect] send failed: conn_id=%s err=%v", connID, err)
 					_ = ws.Conn.Close()
 					h.ctx.S.ConnMgr().Remove(connID)
 					continue

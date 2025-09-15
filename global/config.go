@@ -2,6 +2,7 @@ package global
 
 import (
 	"PProject/data/database/mgo/mongoutil"
+	"PProject/logger"
 	mid "PProject/middleware"
 	msg "PProject/module/message"
 	ka "PProject/service/kafka"
@@ -11,8 +12,17 @@ import (
 	"context"
 
 	sarama "github.com/Shopify/sarama"
-	"github.com/golang/glog"
 )
+
+var GlobalConfig = AppConfig{
+	IsMsgGateWay: false, // 是否是消息网关
+	GroupId:      "msg_gateway",
+}
+
+type AppConfig struct {
+	IsMsgGateWay bool
+	GroupId      string
+}
 
 func ConfigAll() {
 	ConfigIds()
@@ -23,6 +33,8 @@ func ConfigAll() {
 }
 
 func ConfigIds() {
+
+	logger.Infof("配置id生成")
 	ids.SetNodeID(100)
 }
 
@@ -79,18 +91,18 @@ func ConfigKafka(handler ka.MessageHandler) {
 		// 1) 生成所有大 Topic 名称
 		topics := ka.GenTopics()
 		allTopics := append(ka.GenTopics(), ka.GenCAckTopic()...)
-		glog.Infof("[Kafka] allTopics=%v", allTopics)
+		logger.Infof("[Kafka] allTopics=%v", allTopics)
 
 		// 2) 启动前（可选）创建 Topic
 		if ka.Cfg.AutoCreateTopicsOnStart {
 			adminCfg := ka.BuildBaseConfig()
 			admin, err := sarama.NewClusterAdmin(ka.Cfg.Brokers, adminCfg)
 			if err != nil {
-				glog.Infof("[Kafka][ERR] create admin: %v", err)
+				logger.Infof("[Kafka][ERR] create admin: %v", err)
 				return
 			}
 			if err := ka.EnsureTopics(admin, allTopics); err != nil {
-				glog.Infof("[Kafka][ERR] ensure allTopics: %v", err)
+				logger.Infof("[Kafka][ERR] ensure allTopics: %v", err)
 				_ = admin.Close()
 				return
 			}
@@ -99,11 +111,11 @@ func ConfigKafka(handler ka.MessageHandler) {
 
 		// 3) 初始化 Client & Producer
 		if err := ka.InitKafkaClient(); err != nil {
-			glog.Infof("[Kafka][ERR] init client: %v", err)
+			logger.Infof("[Kafka][ERR] init client: %v", err)
 			return
 		}
 		if err := ka.InitSyncProducerFromClient(); err != nil {
-			glog.Infof("[Kafka][ERR] init producer: %v", err)
+			logger.Infof("[Kafka][ERR] init producer: %v", err)
 			return
 		}
 
@@ -120,7 +132,7 @@ func ConfigKafka(handler ka.MessageHandler) {
 		// 6) 阻塞直到 ctx.Done()
 		select {
 		case <-ctx.Done():
-			glog.Infof("[Kafka] context done, shutting down")
+			logger.Infof("[Kafka] context done, shutting down")
 		}
 	}()
 }
@@ -141,18 +153,18 @@ func GetTenantID() string {
 //
 //		// 1) 生成 topics
 //		topics := ka.GenTopicsWithPattern(appCfg)
-//		glog.Infof("[Kafka/%s] topics=%v", appCfg.GroupID, topics)
+//		logger.Infof("[Kafka/%s] topics=%v", appCfg.GroupID, topics)
 //
 //		// 2) 创建 Topic（可选）
 //		if appCfg.AutoCreateTopicsOnStart {
 //			adminCfg := ka.BuildBaseConfigWith(appCfg)
 //			admin, err := sarama.NewClusterAdmin(appCfg.Brokers, adminCfg)
 //			if err != nil {
-//				glog.Errorf("[Kafka/%s][ERR] create admin: %v", appCfg.GroupID, err)
+//				logger.Errorf("[Kafka/%s][ERR] create admin: %v", appCfg.GroupID, err)
 //				return
 //			}
 //			if err := ka.EnsureTopicsWith(admin, topics, appCfg); err != nil {
-//				glog.Errorf("[Kafka/%s][ERR] ensure topics: %v", appCfg.GroupID, err)
+//				logger.Errorf("[Kafka/%s][ERR] ensure topics: %v", appCfg.GroupID, err)
 //				_ = admin.Close()
 //				return
 //			}
@@ -161,11 +173,11 @@ func GetTenantID() string {
 //
 //		// 3) 初始化 client & producer
 //		if err, _ := ka.InitKafkaClientWith(appCfg); err != nil {
-//			glog.Errorf("[Kafka/%s][ERR] init client: %v", appCfg.GroupID, err)
+//			logger.Errorf("[Kafka/%s][ERR] init client: %v", appCfg.GroupID, err)
 //			return
 //		}
 //		if err := ka.InitSyncProducerFromClient(); err != nil {
-//			glog.Errorf("[Kafka/%s][ERR] init producer: %v", appCfg.GroupID, err)
+//			logger.Errorf("[Kafka/%s][ERR] init producer: %v", appCfg.GroupID, err)
 //			return
 //		}
 //
@@ -180,13 +192,13 @@ func GetTenantID() string {
 //		// 5) 启动 consumer group
 //		_, err := ka.BootConsumersWith(appCfg.GroupID, topics)
 //		if err != nil {
-//			glog.Errorf("[Kafka/%s][ERR] boot consumers: %v", appCfg.GroupID, err)
+//			logger.Errorf("[Kafka/%s][ERR] boot consumers: %v", appCfg.GroupID, err)
 //			return
 //		}
 //
 //		// 6) 阻塞，直到 ctx.Done()
 //		<-ctx.Done()
-//		glog.Infof("[Kafka/%s] shutting down", appCfg.GroupID)
+//		logger.Infof("[Kafka/%s] shutting down", appCfg.GroupID)
 //
 //		ka.CloseSyncProducer()
 //		ka.CloseKafkaClient()

@@ -2,10 +2,10 @@ package chat
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	ka "PProject/service/kafka"
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -87,7 +87,7 @@ func (s *Server) RunToRouter() {
 	s.LoopRelayData(ctx)
 	for {
 		if err := s.loopRouter(); err != nil {
-			log.Printf("router stream closed: %v, retry in %v", err, retry)
+			logger.Errorf("router stream closed: %v, retry in %v", err, retry)
 			time.Sleep(retry)
 			if retry < 5*time.Second {
 				retry *= 2
@@ -102,7 +102,7 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 		// defer s.wg.Done()
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("[loopConnect] panic recovered: %v", r)
+				logger.Errorf("[loopConnect] panic recovered: %v", r)
 			}
 		}()
 
@@ -117,12 +117,12 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				log.Printf("[LoopRelayData 数据处理] ctx done: %v", ctx.Err())
+				logger.Infof("[LoopRelayData 数据处理] ctx done: %v", ctx.Err())
 				return
 
 			case msg, ok := <-outCh:
 				if !ok {
-					log.Printf("[LoopRelayData 数据处理] 数据处理通道已经关闭")
+					logger.Infof("[LoopRelayData 数据处理] 数据处理通道已经关闭")
 					return
 				}
 				if msg == nil {
@@ -131,20 +131,20 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 
 				ws, res := s.connMgr.Get(msg.To)
 				if !res {
-					log.Printf("[数据处理] 获取到有效的客户端   error: %v", res)
+					logger.Infof("[数据处理] 获取到有效的客户端   error: %v", res)
 					continue
 				}
 
 				// 序列化（一次性）
 				data, err := marshaller.Marshal(msg)
 				if err != nil {
-					log.Printf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", err)
+					logger.Errorf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", err)
 					continue
 				}
 
 				// 发送（带写超时）
 				if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
-					log.Printf("[loopConnect] send failed: conn_id=%s err=%v", err)
+					logger.Errorf("[loopConnect] send failed: conn_id=%s err=%v", err)
 					// 发送失败：关闭并从管理器移除，防止死连接占用资源
 					_ = ws.Close()
 					s.connMgr.Remove(msg.To)

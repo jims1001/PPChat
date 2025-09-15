@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"time"
 
+	"PProject/logger"
+
 	"github.com/emicklei/go-restful/v3/log"
 	"github.com/gin-gonic/gin"
-	"github.com/golang/glog"
 	"github.com/gorilla/websocket"
 )
 
@@ -23,14 +24,15 @@ func (s *Server) HandleWS(c *gin.Context) {
 	defer func(ws *websocket.Conn) {
 		err := ws.Close()
 		if err != nil {
-			glog.Infof("[HandleWSV2] close websocket error: %v", err)
+
+			logger.Infof("[HandleWSV2] close websocket error: %v", err)
 			return
 		}
 	}(ws)
 
 	if err != nil {
 		// 常见：非 WebSocket 请求/握手失败
-		glog.Infof("[HandleWSV2] upgrade websocket error: %v", err)
+		logger.Infof("[HandleWSV2] upgrade websocket error: %v", err)
 		return
 	}
 
@@ -42,7 +44,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 			Conn: ws,
 		})
 		if err != nil {
-			glog.Errorf("[connectHandler] connect handler error: %v", err)
+			logger.Infof("[connectHandler] connect handler error: %v", err)
 			return
 		}
 	}
@@ -51,12 +53,12 @@ func (s *Server) HandleWS(c *gin.Context) {
 	if pingHandler != nil {
 		err := pingHandler.Handle(&ChatContext{s}, nil, &WsConn{Conn: ws})
 		if err != nil {
-			glog.Infof("[pingHandler] ping error: %v", err)
+			logger.Infof("[pingHandler] ping error: %v", err)
 			return
 		}
 	}
 	rec := s.ConnMgr().GetClient(ws)
-	glog.Infof("[HandleWS] rec %v", rec)
+	logger.Infof("[HandleWS] rec %v", rec)
 	done := make(chan struct{})
 	// ---- 读循环：只读，不写；出错即退出（写协程收尾） ----
 	for {
@@ -67,11 +69,11 @@ func (s *Server) HandleWS(c *gin.Context) {
 				websocket.CloseGoingAway,
 				websocket.CloseNoStatusReceived,
 			) {
-				log.Printf("[WS] peer closed snowID=%s err=%v", rec.SnowID, rerr)
+				logger.Infof("[WS] peer closed snowID=%s err=%v", rec.SnowID, rerr)
 			} else if ne, ok := rerr.(net.Error); ok && ne.Timeout() {
-				log.Printf("[WS] read timeout snowID=%s err=%v", rec.SnowID, rerr)
+				logger.Infof("[WS] read timeout snowID=%s err=%v", rec.SnowID, rerr)
 			} else {
-				log.Printf("[WS] read err snowID=%s err=%v", rec.SnowID, rerr)
+				logger.Infof("[WS] read err snowID=%s err=%v", rec.SnowID, rerr)
 			}
 			break
 		}
@@ -92,11 +94,11 @@ func (s *Server) HandleWS(c *gin.Context) {
 			continue
 		}
 
-		glog.Infof("[HandleWS] 接收到数据 snowID=%s msg=%v", rec.SnowID, msg)
+		logger.Infof("[HandleWS] 接收到数据 snowID=%s msg=%v", rec.SnowID, msg)
 
 		dataHandler := s.Disp().GetHandler(msg.Type)
 		if dataHandler == nil {
-			glog.Infof("[HandleWS] 读取消息数据 no handler for message type=%d", msg.Type)
+			logger.Infof("[HandleWS] 读取消息数据 no handler for message type=%d", msg.Type)
 			continue
 		}
 
@@ -104,7 +106,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 			err := dataHandler.Handle(&ChatContext{S: s}, msg, &WsConn{Conn: ws})
 			if err != nil {
-				glog.Infof("[HandleWS] dataHandler  for message type=%d", msg.Type)
+				logger.Infof("[HandleWS] dataHandler  for message type=%d", msg.Type)
 				continue
 			}
 
@@ -115,17 +117,17 @@ func (s *Server) HandleWS(c *gin.Context) {
 
 			dataHandler := s.Disp().GetHandler(msg.Type)
 			if dataHandler == nil {
-				glog.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
+				logger.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
 				continue
 			}
 
 			err := dataHandler.Handle(&ChatContext{S: s}, msg, &WsConn{Conn: ws})
 			if err != nil {
-				glog.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
+				logger.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)
 				continue
 			}
 
-			log.Printf("[WS] 接收到消息is user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
+			logger.Infof("[WS] 接收到消息is user=%s conn=%s snowID=%s", rec.UserId, msg.ConnId, rec.SnowID)
 		}
 
 	}
@@ -148,7 +150,7 @@ func (s *Server) HandleWS(c *gin.Context) {
 	select {
 	case WsOutbound <- &pb.MessageFrame{Type: pb.MessageFrame_UNREGISTER, From: rec.UserId}:
 	default:
-		log.Printf("[WS] wsOutbound ch full, drop UNREGISTER user=%s", rec.UserId)
+		logger.Infof("[WS] wsOutbound ch full, drop UNREGISTER user=%s", rec.UserId)
 	}
 
 	<-done // 等写协程真正关闭 ws & 回收

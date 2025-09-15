@@ -1,24 +1,23 @@
 package kafka
 
 import (
+	"PProject/logger"
 	"context"
-	"log"
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/golang/glog"
 	"github.com/panjf2000/ants/v2"
 )
 
 type ConsumerGroupHandler struct{}
 
 func (h *ConsumerGroupHandler) Setup(sarama.ConsumerGroupSession) error {
-	log.Println("Consumer group setup")
+	logger.Info("Consumer group setup")
 	return nil
 }
 
 func (h *ConsumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
-	log.Println("Consumer group cleanup")
+	logger.Infof("Consumer group cleanup")
 	return nil
 }
 
@@ -36,7 +35,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	pool, err := ants.NewPool(32,
 		ants.WithPreAlloc(true),
 		ants.WithNonblocking(false), // pool 满时阻塞提交，形成自然背压
-		ants.WithPanicHandler(func(p any) { log.Printf("worker panic: %v", p) }),
+		ants.WithPanicHandler(func(p any) { logger.Errorf("worker panic: %v", p) }),
 	)
 	if err != nil {
 		return err
@@ -55,7 +54,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 	commitTicker := time.NewTicker(2 * time.Second)
 	defer commitTicker.Stop()
 
-	log.Printf("[claim start] topic=%s partition=%d initial=%d",
+	logger.Infof("[claim start] topic=%s partition=%d initial=%d",
 		claim.Topic(), claim.Partition(), claim.InitialOffset)
 
 	for {
@@ -63,7 +62,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 		case msg, ok := <-claim.Messages():
 			if !ok {
 				// 分区被回收
-				log.Printf("[claim done] topic=%s partition=%d", claim.Topic(), claim.Partition())
+				logger.Errorf("[claim done] topic=%s partition=%d", claim.Topic(), claim.Partition())
 				return nil
 			}
 			// 提前拷贝（如你的业务会修改 msg.Value/Key；若只读可不拷贝）
@@ -76,7 +75,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			// 提交到 ants：只做业务处理，不触碰 session
 			hdr, err := GetHandler(msg.Topic)
 			if err != nil {
-				log.Printf("No handler for topic=%s: %v", msg.Topic, err)
+				logger.Errorf("No handler for topic=%s: %v", msg.Topic, err)
 				<-inflight
 				ackC <- ack{off: msg.Offset, ok: false}
 				break
@@ -85,7 +84,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 				return func() {
 					defer func() { <-inflight }()
 					if e := h(m.Topic, m.Key, m.Value); e != nil {
-						log.Printf("handler error topic=%s partition=%d offset=%d err=%v",
+						logger.Errorf("handler error topic=%s partition=%d offset=%d err=%v",
 							m.Topic, m.Partition, m.Offset, e)
 						ackC <- ack{off: m.Offset, ok: false}
 						return
@@ -95,7 +94,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 			}(msg, hdr))
 			if submitErr != nil {
 				// 极端情况下 pool.Submit 失败（例如被关闭）
-				log.Printf("pool submit failed: %v", submitErr)
+				logger.Errorf("pool submit failed: %v", submitErr)
 				<-inflight
 				ackC <- ack{off: msg.Offset, ok: false}
 			}
@@ -137,7 +136,7 @@ func (h *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 
 		case <-session.Context().Done():
 			// rebalance，尽快退出
-			log.Printf("[claim ctx done] topic=%s partition=%d", claim.Topic(), claim.Partition())
+			logger.Infof("[claim ctx done] topic=%s partition=%d", claim.Topic(), claim.Partition())
 			return nil
 		}
 	}
@@ -170,7 +169,7 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 	// 错误日志
 	go func() {
 		for err := range group.Errors() {
-			log.Printf("Consumer group error: %v", err)
+			logger.Errorf("Consumer group error: %v", err)
 		}
 	}()
 
@@ -182,11 +181,11 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 		for {
 			select {
 			case <-ctx.Done():
-				glog.Infof("Consumer group stopped")
+				logger.Infof("Consumer group stopped")
 				return
 			default:
 				// 模拟业务逻辑
-				glog.Infof("Consumer group working")
+				logger.Infof("Consumer group working")
 				time.Sleep(time.Second)
 			}
 		}
@@ -195,7 +194,7 @@ func StartConsumerGroup(brokers []string, groupID string, topics []string) error
 	handler := &ConsumerGroupHandler{}
 	for {
 		if err := group.Consume(ctx, topics, handler); err != nil {
-			log.Printf("Consume error: %v", err)
+			logger.Errorf("Consume error: %v", err)
 			// 短暂退避，避免 tight loop
 			time.Sleep(time.Second)
 		}
