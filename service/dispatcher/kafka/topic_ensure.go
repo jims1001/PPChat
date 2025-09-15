@@ -194,6 +194,8 @@ func EnsureTopics(ctx context.Context, app AppConfig) error {
 				})
 			}
 		}
+
+		RegisterDefaultHandlers(mc.Keys(), mc.Handler)
 	}
 
 	for _, p := range plans {

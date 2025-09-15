@@ -26,8 +26,8 @@ func main() {
 	// 配置生成的ids
 
 	// 配置为 网关节点
-	global.GlobalConfig.NodeType = global.NodeTypeMsgGateWay
-	global.GlobalConfig = global.MessageGatewayConfig
+	global.GlobalConfig.NodeType = global.NodeTypeDataNode
+	global.GlobalConfig = global.MessageDataConfig
 
 	global.ConfigIds()
 	global.ConfigRedis()
@@ -87,7 +87,7 @@ func main() {
 		healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 		healthServer.SetServingStatus("gateway.GatewayControl", healthpb.HealthCheckResponse_SERVING)
 
-		logger.Infof("[gRPC] Listening on :50051")
+		logger.Infof("[gRPC] Listening on :%d", global.GlobalConfig.GrpcPort)
 		if err := gs.Serve(lis); err != nil {
 			logger.Errorf("gRPC server failed: %v", err)
 		}
