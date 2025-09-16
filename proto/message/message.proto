@@ -11,7 +11,7 @@ syntax = "proto3";
 
 package message.v1;
 
-option go_package = "PProject/gen/msg;messagepb";
+option go_package = "PPChat/gen/msg;messagepb";
 
 // 富媒体/自动审核等扩展定义（在你的工程内提供）
 import "google/protobuf/struct.proto";

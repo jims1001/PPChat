@@ -3,6 +3,7 @@ package handler
 import (
 	pb "PProject/gen/message"
 	"PProject/service/chat"
+	online "PProject/service/storage"
 	"time"
 
 	"PProject/logger"
@@ -56,6 +57,7 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 	go func(rec *chat.WsConn) {
 		ticker := time.NewTicker(pingInterval)
 		first := time.NewTimer(firstPingDelay)
+
 		defer func() {
 			ticker.Stop()
 			first.Stop()
@@ -97,6 +99,15 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 
 			case <-ticker.C: // 常规 ping
 				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+
+				if ok, err := online.GetManager().HeartbeatAuthorized(h.ctx.S.ConnMgr().GwId(), rec.UserId, rec.SnowID); err != nil {
+					logger.Infof("[PingHandler] renew after biz write failed: %v", err)
+				} else if !ok {
+					logger.Infof("[PingHandler] renew after biz write returned false")
+				}
+
+				logger.Infof("ping expire is sucess")
+
 				if err := conn.Conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
 					logger.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
 					return
@@ -104,5 +115,6 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 			}
 		}
 	}(rec)
+
 	return nil
 }

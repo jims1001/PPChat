@@ -56,7 +56,7 @@ func applyConfigToOptions(cfg *Config) (*options.ClientOptions, error) {
 	// 也可在此添加更多可选项（按需开启）
 	// opts.SetRetryWrites(true)
 	// opts.SetServerSelectionTimeout(10 * time.Second)
-	// opts.SetAppName("PProject")
+	// opts.SetAppName("PPChat")
 
 	return opts, nil
 }

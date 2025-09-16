@@ -1,6 +1,6 @@
 syntax = "proto3";
 package message.v1;
-option go_package = "PProject/gen/session;sessionpb";
+option go_package = "PPChat/gen/session;sessionpb";
 
 import "google/protobuf/empty.proto";
 import "message/frame.proto";

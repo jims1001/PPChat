@@ -24,6 +24,7 @@ type OnlineConfig struct {
 	Secret        string        // 预留签名密钥
 	UseEXAT       bool          // 使用EXAT/PEXPIREAT（更精准）
 	UnauthTTL     time.Duration // 未授权宽限期（<=0表示禁用未授权阶段）
+	UserIndexTTL  time.Duration
 }
 
 // ===== Lua 脚本 =====
@@ -226,7 +227,64 @@ else
 end
 `
 
-// ===== Store =====
+const luaHeartbeatAuth = `-- KEYS[1] = zUser      -> nidx:{gateway_01:user_10001}
+-- KEYS[2] = kConn      -> n:{gateway_01:user_10001}:id:<snowID>
+-- ARGV[1] = ttlSec     -> kConn 会话 TTL（秒）
+-- ARGV[2] = nowUnix    -> 当前时间（秒）
+-- ARGV[3] = expAt      -> 本次续期到期时间（秒）
+-- ARGV[4] = useEXAT    -> 1=EXPIREAT, 0=EXPIRE
+-- ARGV[5] = memberStr  -> 索引里使用的 member（推荐直接传 kConn 字符串）
+-- ARGV[6] = zUserTtl   -> 主索引兜底 TTL（秒，0=不设置）
+-- ARGV[7] = refreshIdx -> 1=每次都 EXPIRE zUser；0=仅当 zUser 无 TTL 时设置
+-- ARGV[8] = cleanExp   -> 1=清理 zUser 里已过期成员；0=不清理
+
+local zUser      = KEYS[1]
+local kConn      = KEYS[2]
+local ttlSec     = tonumber(ARGV[1])
+local nowUnix    = tonumber(ARGV[2])
+local expAt      = tonumber(ARGV[3])
+local useEXAT    = tonumber(ARGV[4]) == 1
+local memberStr  = ARGV[5]
+local zUserTtl   = tonumber(ARGV[6] or "0")
+local refreshIdx = tonumber(ARGV[7] or "1") == 1
+local cleanExp   = tonumber(ARGV[8] or "1") == 1
+
+-- 1) 会话存在性检查
+if redis.call('EXISTS', kConn) == 0 then
+  return 0
+end
+
+-- 2) 续期会话 TTL
+if useEXAT then
+  redis.call('EXPIREAT', kConn, expAt)
+else
+  redis.call('EXPIRE',   kConn, ttlSec)
+end
+
+-- 3) 清理索引中过期成员（按 score）
+if cleanExp then
+  redis.call('ZREMRANGEBYSCORE', zUser, '-inf', nowUnix)
+end
+
+-- 4) 索引写/续：member=连接 key 字符串，score=expAt
+redis.call('ZADD', zUser, expAt, memberStr)
+
+-- 5) 刷新主索引 TTL
+if zUserTtl > 0 then
+  if refreshIdx then
+    redis.call('EXPIRE', zUser, zUserTtl)
+  else
+    local ttl = redis.call('TTL', zUser)
+    if ttl == -1 then
+      redis.call('EXPIRE', zUser, zUserTtl)
+    end
+  end
+end
+
+return 1
+ `
+
+// OnlineStore ===== Store =====
 type OnlineStore struct {
 	conf OnlineConfig
 	// 你原有的脚本（保留占位）
@@ -243,6 +301,7 @@ type OnlineStore struct {
 	luaGetActiveAndSweep *redis.Script
 	luaIsOnline          *redis.Script
 	luaGetNewestActive   *redis.Script
+	luaHeartbeatAuth     *redis.Script
 }
 
 func newOnlineStore(conf OnlineConfig) *OnlineStore {
@@ -264,6 +323,7 @@ func (m *OnlineStore) initExtraScripts() {
 	m.luaGetActiveAndSweep = redis.NewScript(luaGetActiveAndSweep)
 	m.luaIsOnline = redis.NewScript(luaIsOnline)
 	m.luaGetNewestActive = redis.NewScript(luaGetNewestActive)
+	m.luaHeartbeatAuth = redis.NewScript(luaHeartbeatAuth)
 }
 
 // ===== Key 构造 =====
@@ -310,7 +370,7 @@ func (m *OnlineStore) userIndexKey(userID string) string {
 
 // ===== 未授权阶段 API =====
 
-// Connect：创建一个未授权连接（仅连接未登录）
+// Connect Connect：创建一个未授权连接（仅连接未登录）
 func (m *OnlineStore) Connect(ctx context.Context) (sessionKey, snowID string, err error) {
 	if m.conf.UnauthTTL <= 0 {
 		return "", "", errors.New("UnauthTTL not configured")
@@ -337,7 +397,7 @@ func (m *OnlineStore) Connect(ctx context.Context) (sessionKey, snowID string, e
 	return sKey, snowID, nil
 }
 
-// HeartbeatUnauth：未授权连接心跳（延长宽限）
+// HeartbeatUnauth HeartbeatUnauth：未授权连接心跳（延长宽限）
 func (m *OnlineStore) HeartbeatUnauth(ctx context.Context, snowID string) error {
 	if m.conf.UnauthTTL <= 0 {
 		return nil
@@ -360,7 +420,52 @@ func (m *OnlineStore) HeartbeatUnauth(ctx context.Context, snowID string) error 
 	return err
 }
 
-// SweepUnauth：清理所有超时未授权连接，并选择性广播“踢出”
+// HeartbeatAuthorized ：已授权会话心跳续期
+// 建议：由调用方传入 *短超时* ctx（如 2s）
+// 返回：true=续期成功；false=会话不存在；err!=nil 时是 Redis 或脚本执行错误。
+// 建议：让上层传短超时 ctx，如 2s。这里保持你现有签名即可。
+func (m *OnlineStore) HeartbeatAuthorized(gatewayID, userID, snowID string) (bool, *errors.CodeError) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// 统一哈希标签，确保 Cluster 同槽
+	zUser := fmt.Sprintf("nidx:{%s:%s}", gatewayID, userID)
+	kConn := fmt.Sprintf("n:{%s:%s}:id:%s", gatewayID, userID, snowID)
+
+	now := time.Now()
+	expAt := now.Add(m.conf.TTL).Unix()
+	ttlSec := int64(m.conf.TTL / time.Second)
+	zUserTTL := int64(0)
+	if m.conf.UserIndexTTL > 0 {
+		zUserTTL = int64(m.conf.UserIndexTTL / time.Second) // e.g. 86400
+	}
+
+	rc, err := m.luaHeartbeatAuth.Run(
+		ctx, redis2.GetRedis(),
+		[]string{zUser, kConn},
+		ttlSec,                    // ARGV[1]
+		now.Unix(),                // ARGV[2]
+		expAt,                     // ARGV[3]
+		boolToInt(m.conf.UseEXAT), // ARGV[4]
+		kConn,                     // ARGV[5] -> memberStr = 连接 key 字符串
+		zUserTTL,                  // ARGV[6]
+		1,                         // ARGV[7] refreshIdx=1: 每次都 EXPIRE zUser（改成 0=仅无TTL时设置）
+		1,                         // ARGV[8] cleanExp=1: 清理索引中过期成员
+	).Int64()
+	if err != nil {
+		return false, &errors.CodeError{Msg: err.Error(), Code: 201}
+	}
+	switch rc {
+	case 1:
+		return true, nil
+	case 0:
+		return false, nil // 会话 key 不存在（被踢/过期/未建立）
+	default:
+		return false, &errors.CodeError{Msg: fmt.Sprintf("unexpected hb rc=%d", rc), Code: 202}
+	}
+}
+
+// SweepUnauth SweepUnauth：清理所有超时未授权连接，并选择性广播“踢出”
 func (m *OnlineStore) SweepUnauth(ctx context.Context, publish bool) ([]string, error) {
 	if m.conf.UnauthTTL <= 0 {
 		return nil, nil
@@ -379,7 +484,7 @@ func (m *OnlineStore) SweepUnauth(ctx context.Context, publish bool) ([]string, 
 	return victims, nil
 }
 
-// OfflineUnauth：未授权单会话离线（幂等）。可选广播。
+// OfflineUnauth OfflineUnauth：未授权单会话离线（幂等）。可选广播。
 func (m *OnlineStore) OfflineUnauth(ctx context.Context, snowID string, publish bool, reason string) (bool, error) {
 	if m.conf.UnauthTTL <= 0 {
 		// 未开启未授权阶段，直接视为无事发生
@@ -404,7 +509,7 @@ func (m *OnlineStore) OfflineUnauth(ctx context.Context, snowID string, publish 
 	return ok, nil
 }
 
-// Authorize：把“未授权连接”原子绑定成“已授权会话”
+// Authorize Authorize：把“未授权连接”原子绑定成“已授权会话”
 func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (bool, *errors.CodeError) {
 	if m.conf.UnauthTTL <= 0 {
 		return false, &errors.CodeError{Msg: "unauth stage disabled", Code: 100}
@@ -439,7 +544,7 @@ func (m *OnlineStore) Authorize(ctx context.Context, userID, snowID string) (boo
 
 // ===== 已授权阶段：下线/清理 =====
 
-// Offline：单个会话下线（幂等）。当 userID=="" 时，按“未授权离线”处理。
+// Offline Offline：单个会话下线（幂等）。当 userID=="" 时，按“未授权离线”处理。
 func (m *OnlineStore) Offline(ctx context.Context, userID, snowID string, publish bool, reason string) (bool, error) {
 	if strings.TrimSpace(userID) == "" {
 		// 未授权会话的离线
@@ -465,7 +570,7 @@ func (m *OnlineStore) Offline(ctx context.Context, userID, snowID string, publis
 	return ok, nil
 }
 
-// ForceLogoutUser：强制某用户“全部会话”下线（管理员/风控场景）。可选广播。
+// ForceLogoutUser ForceLogoutUser：强制某用户“全部会话”下线（管理员/风控场景）。可选广播。
 func (m *OnlineStore) ForceLogoutUser(ctx context.Context, userID string, publish bool, reason string) ([]string, error) {
 	zUser := m.userIndexKey(userID)
 	keys, err := m.luaLogoutAll.Run(ctx, redis2.GetRedis(), []string{zUser}).StringSlice()
@@ -480,7 +585,7 @@ func (m *OnlineStore) ForceLogoutUser(ctx context.Context, userID string, publis
 	return keys, nil
 }
 
-// SweepAuthedUser SweepAuthedUser：清理“已授权但过期”的会话（按 score<=now）。可选广播。
+// SweepAuthedUser ：清理“已授权但过期”的会话（按 score<=now）。可选广播。
 func (m *OnlineStore) SweepAuthedUser(ctx context.Context, userID string, publish bool) ([]string, error) {
 	zUser := m.userIndexKey(userID)
 	now := time.Now().Unix()
@@ -580,61 +685,6 @@ func ExtractGateway(key string) string {
 	}
 	return ""
 }
-
-// BatchListOnlineConnList 批量查询多个用户的在线连接。返回 map[userID][]connID
-//func (m *OnlineStore) BatchListOnlineConnList(ctx context.Context, userIDs []string, limitPerUser int64) (map[string][]string, error) {
-//	if limitPerUser <= 0 {
-//		limitPerUser = 1000
-//	}
-//
-//	// 如果你的分数是“秒”，keepMilli=false；如果是“毫秒”，设 true
-//	const keepMilli = false
-//
-//	now := time.Now()
-//	var nowStr string
-//	if keepMilli {
-//		nowStr = strconv.FormatInt(now.UnixMilli(), 10)
-//	} else {
-//		nowStr = strconv.FormatInt(now.Unix(), 10)
-//	}
-//
-//	const batch = 128
-//	out := make(map[string][]string, len(userIDs))
-//
-//	for i := 0; i < len(userIDs); i += batch {
-//		j := i + batch
-//		if j > len(userIDs) {
-//			j = len(userIDs)
-//		}
-//
-//		pipe := redis2.GetRedis().Pipeline()
-//		idsList := userIDs[i:j]
-//		cmds := make([]*redis.StringSliceCmd, 0, len(idsList))
-//
-//		for _, uid := range idsList {
-//			key := m.userIndexKey(uid)
-//
-//			// 先清理已过期（严格开区间：小于 now 的都删除）
-//			pipe.ZRemRangeByScore(ctx, key, "-inf", "("+nowStr+")")
-//
-//			// 再查未过期的连接，按需要限流
-//			cmds = append(cmds, pipe.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-//				Min: nowStr, Max: "+inf", Offset: 0, Count: limitPerUser,
-//			}))
-//		}
-//
-//		if _, err := pipe.Exec(ctx); err != nil {
-//			return nil, err
-//		}
-//		for k, uid := range idsList {
-//			vals, _ := cmds[k].Result()
-//			if len(vals) > 0 {
-//				out[uid] = vals
-//			}
-//		}
-//	}
-//	return out, nil
-//}
 
 // GetActiveSessions GetActiveSessions：获取用户所有“仍有效”的会话键（顺带清理过期）
 func (m *OnlineStore) GetActiveSessions(ctx context.Context, userID string) ([]string, error) {

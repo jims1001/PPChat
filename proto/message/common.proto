@@ -1,6 +1,6 @@
 syntax = "proto3";
 package message.v1;
-option go_package = "PProject/gen/msg;messagepb";
+option go_package = "PPChat/gen/msg;messagepb";
 
 // 通用ACK
 message AckData {

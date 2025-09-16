@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package message.v1;
 
-option go_package = "PProject/gen/msg;messagepb";
+option go_package = "PPChat/gen/msg;messagepb";
 
 // 完整性/签名/加密算法（后续可启用）
 enum HashAlg {

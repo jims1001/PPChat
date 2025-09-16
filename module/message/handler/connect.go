@@ -35,7 +35,9 @@ func NewConnectHandler(ctx *chat.ChatContext) chat.Handler {
 		UseJSONValue:  true,
 		Secret:        "hmac-secret",
 		UseEXAT:       true,
+		UserIndexTTL:  2 * time.Minute,
 		UnauthTTL:     30 * time.Second, // 如遇“未授权清理过快”，可临时调大验证
+
 	}
 
 	// Online 管理器（幂等）
