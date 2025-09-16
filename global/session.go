@@ -1,6 +1,7 @@
 package global
 
 import (
+	"PProject/global/config"
 	errors "PProject/tools/errs"
 	jwtlib "PProject/tools/security"
 	"strings"
@@ -32,7 +33,7 @@ func GetAuthInfo(c *gin.Context) (*AuthInfo, error) {
 		return nil, errors.New("token or hash is empty")
 	}
 
-	opts := jwtlib.DefaultOptions(GetJwtSecret())
+	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
 	claims, err := jwtlib.Verify(opts, token, authHash)
 	if (err != nil) || (claims == nil) {
 		return nil, err

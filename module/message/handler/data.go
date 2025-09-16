@@ -35,8 +35,11 @@ func (h *DataHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 	// 判断接收者是否在线 如果不在线 就发松mq 落库 如果在线 看下 在那个节点， 找到那个节点 发送节点相关的topic
 	logger.Infof("[WS] 接收到消息  fromUser =%v toUser:%v ", f.From, to)
 
-	keys := ka.Cfg.GetTopicKeys(ka.MessageTypeDataSender)
+	ka.Cfg.GetTopicKeys(ka.MessageTypeDataReceiver)
+
+	keys := ka.Cfg.GetMessageHandlerConfig(pb.MessageFrameData_DATA).SendTopicKeys()
 	topicKey := ka.SelectTopicByUser(f.To, keys)
+	logger.Infof("msg data send topicKey:%v", topicKey)
 
 	marshaller := protojson.MarshalOptions{
 		Indent:          "",    // 美化输出

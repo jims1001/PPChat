@@ -1,8 +1,8 @@
 package service
 
 import (
-	config "PProject/global"
 	global "PProject/global"
+	config2 "PProject/global/config"
 	"PProject/logger"
 	usermodel "PProject/module/user/model"
 	"PProject/service/mgo"
@@ -47,7 +47,7 @@ func Login(ctx context.Context, in LoginParams) (*usermodel.UserSession, error) 
 		return nil, err
 	}
 
-	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
+	opts := jwtlib.DefaultOptions(config2.GetJwtSecret())
 	now := in.Now
 	if now.IsZero() {
 		now = time.Now()
@@ -98,7 +98,7 @@ func Login(ctx context.Context, in LoginParams) (*usermodel.UserSession, error) 
 func Verify(ctx context.Context,
 	tokenStr string, tokenHash string) (*usermodel.UserSession, error) {
 	// A) JWT 签名/基本 claims 校验（确保不是伪造；不决定是否可用）
-	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
+	opts := jwtlib.DefaultOptions(config2.GetJwtSecret())
 	_, err := jwtlib.Verify(opts, tokenStr, tokenHash)
 	if err != nil {
 		return nil, err // 签名/格式错误，直接拒绝
@@ -269,7 +269,7 @@ func ReLoginArchiveAndReplace(ctx context.Context,
 }
 
 func GetUserByToken(ctx context.Context, tokenStr, tokenHash string) (*usermodel.User, error) {
-	opts := jwtlib.DefaultOptions(config.GetJwtSecret())
+	opts := jwtlib.DefaultOptions(config2.GetJwtSecret())
 	// 1. 验证 token // 假设你定义了
 	claims, err := jwtlib.Verify(opts, tokenStr, tokenHash)
 	if err != nil {

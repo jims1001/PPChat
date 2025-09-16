@@ -6,7 +6,6 @@ import (
 	"PProject/tools/ids"
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -535,46 +534,107 @@ func (m *OnlineStore) IsOnline(ctx context.Context, userID string) (online bool,
 	return flag == 1, count, nil
 }
 
-// BatchListOnlineConns 批量查询多个用户的在线连接。返回 map[userID][]connID
-func (m *OnlineStore) BatchListOnlineConns(ctx context.Context, userIDs []string, limitPerUser int64) (map[string][]string, error) {
-	if limitPerUser <= 0 {
-		limitPerUser = 1000
+//func (m *OnlineStore) BatchListOnlineConnList(ctx context.Context, user string) ([]string, error) {
+//	now := strconv.FormatInt(time.Now().Unix(), 10) // 或 UnixMilli()
+//	return redis2.GetRedis().ZRangeByScore(ctx, "u2n:{"+user+"}", &redis.ZRangeBy{
+//		Min: now, Max: "+inf",
+//	}).Result()
+//}
+
+func (m *OnlineStore) BatchListOnlineConnList(ctx context.Context, userID string) ([]string, error) {
+	// nidx:{*:user_10002}
+	iter := redis2.GetRedis().Scan(ctx, 0, fmt.Sprintf("nidx:{*:%s}", userID), 100).Iterator()
+	var keys []string
+	for iter.Next(ctx) {
+		keys = append(keys, iter.Val())
 	}
-	now := strconv.FormatInt(time.Now().Unix(), 10) // 毫秒就用 UnixMilli()
-
-	// 分批 pipeline，避免一次放太多命令（64~256 合理）
-	const batch = 128
-	out := make(map[string][]string, len(userIDs))
-
-	for i := 0; i < len(userIDs); i += batch {
-		j := i + batch
-		if j > len(userIDs) {
-			j = len(userIDs)
-		}
-
-		pipe := redis2.GetRedis().Pipeline()
-		cmdList := make([]*redis.StringSliceCmd, 0, j-i)
-		idsList := userIDs[i:j]
-
-		for _, uid := range idsList {
-			key := m.userIndexKey(uid)
-			cmdList = append(cmdList, pipe.ZRangeByScore(ctx, key, &redis.ZRangeBy{
-				Min: now, Max: "+inf", Offset: 0, Count: limitPerUser,
-			}))
-		}
-
-		if _, err := pipe.Exec(ctx); err != nil {
-			return nil, err
-		}
-		for k, uid := range idsList {
-			connList, _ := cmdList[k].Result()
-			if len(connList) > 0 {
-				out[uid] = connList
-			}
-		}
-	}
-	return out, nil
+	return keys, iter.Err()
 }
+
+func (m *OnlineStore) GetUserGateway(ctx context.Context, userID string) (string, error) {
+	keys, err := m.BatchListOnlineConnList(ctx, userID)
+	if len(keys) == -0 || err != nil {
+		return "", fmt.Errorf("user %s has no gateway", userID)
+	}
+
+	gateway := ExtractGateway(keys[0])
+	if gateway == "" {
+		return "", fmt.Errorf("user %s has no gateway", userID)
+	}
+	return gateway, nil
+}
+
+// ExtractGateway 从 key 里提取 gatewayId
+// 例如: "nidx:{gateway_01:user_10001}" -> "gateway_01"
+func ExtractGateway(key string) string {
+	start := strings.IndexByte(key, '{')
+	end := strings.IndexByte(key, '}')
+	if start == -1 || end == -1 || end <= start+1 {
+		return ""
+	}
+	// 花括号里的内容: "gateway_01:user_10001"
+	body := key[start+1 : end]
+	parts := strings.SplitN(body, ":", 2)
+	if len(parts) > 0 {
+		return parts[0]
+	}
+	return ""
+}
+
+// BatchListOnlineConnList 批量查询多个用户的在线连接。返回 map[userID][]connID
+//func (m *OnlineStore) BatchListOnlineConnList(ctx context.Context, userIDs []string, limitPerUser int64) (map[string][]string, error) {
+//	if limitPerUser <= 0 {
+//		limitPerUser = 1000
+//	}
+//
+//	// 如果你的分数是“秒”，keepMilli=false；如果是“毫秒”，设 true
+//	const keepMilli = false
+//
+//	now := time.Now()
+//	var nowStr string
+//	if keepMilli {
+//		nowStr = strconv.FormatInt(now.UnixMilli(), 10)
+//	} else {
+//		nowStr = strconv.FormatInt(now.Unix(), 10)
+//	}
+//
+//	const batch = 128
+//	out := make(map[string][]string, len(userIDs))
+//
+//	for i := 0; i < len(userIDs); i += batch {
+//		j := i + batch
+//		if j > len(userIDs) {
+//			j = len(userIDs)
+//		}
+//
+//		pipe := redis2.GetRedis().Pipeline()
+//		idsList := userIDs[i:j]
+//		cmds := make([]*redis.StringSliceCmd, 0, len(idsList))
+//
+//		for _, uid := range idsList {
+//			key := m.userIndexKey(uid)
+//
+//			// 先清理已过期（严格开区间：小于 now 的都删除）
+//			pipe.ZRemRangeByScore(ctx, key, "-inf", "("+nowStr+")")
+//
+//			// 再查未过期的连接，按需要限流
+//			cmds = append(cmds, pipe.ZRangeByScore(ctx, key, &redis.ZRangeBy{
+//				Min: nowStr, Max: "+inf", Offset: 0, Count: limitPerUser,
+//			}))
+//		}
+//
+//		if _, err := pipe.Exec(ctx); err != nil {
+//			return nil, err
+//		}
+//		for k, uid := range idsList {
+//			vals, _ := cmds[k].Result()
+//			if len(vals) > 0 {
+//				out[uid] = vals
+//			}
+//		}
+//	}
+//	return out, nil
+//}
 
 // GetActiveSessions GetActiveSessions：获取用户所有“仍有效”的会话键（顺带清理过期）
 func (m *OnlineStore) GetActiveSessions(ctx context.Context, userID string) ([]string, error) {

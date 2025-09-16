@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 )
 
@@ -13,10 +14,29 @@ var (
 	mu         sync.RWMutex
 )
 
-func RegisterHandler(topic string, handler MessageHandler) {
+func RegisterHandler(topic string, handler MessageHandler) (ok bool, duplicated bool) {
+	if handler == nil {
+		return false, false
+	}
 	mu.Lock()
 	defer mu.Unlock()
+
+	if old, exists := handlerMap[topic]; exists {
+		oldPtr := reflect.ValueOf(old).Pointer()
+		newPtr := reflect.ValueOf(handler).Pointer()
+
+		if oldPtr == newPtr {
+			// 同函数重复注册 → 幂等
+			// logger.Warn("duplicate same handler", zap.String("topic", topic))
+			return true, true
+		}
+		// 不同函数争夺同一 topic → 拒绝覆盖
+		// logger.Warn("duplicate different handler (kept old)", zap.String("topic", topic))
+		return false, true
+	}
+
 	handlerMap[topic] = handler
+	return true, false
 }
 
 func GetHandler(topic string) (MessageHandler, error) {

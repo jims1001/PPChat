@@ -14,6 +14,14 @@ var (
 	SyncProd    sarama.SyncProducer // 兼容你之前的 sync.go
 )
 
+type FixedPartitioner struct{}
+
+func (p *FixedPartitioner) Partition(msg *sarama.ProducerMessage, numPartitions int32) (int32, error) {
+	return 0, nil // 永远选分区 0
+}
+
+func (p *FixedPartitioner) RequiresConsistency() bool { return true }
+
 func BuildBaseConfigWith(appCfg *AppConfig) *sarama.Config {
 	cfg := sarama.NewConfig()
 
@@ -81,6 +89,7 @@ func BuildBaseConfig() *sarama.Config {
 		Cfg.ProducerRetries = 1
 	}
 	cfg.Producer.Retry.Max = Cfg.ProducerRetries
+
 	cfg.Producer.Partitioner = sarama.NewHashPartitioner // ★ 关键：Key 控制分区
 	switch strings.ToLower(Cfg.ProducerCompression) {
 	case "snappy":

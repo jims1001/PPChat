@@ -2,16 +2,15 @@ package main
 
 import (
 	pb "PProject/gen/gateway"
-	"PProject/global"
+	"PProject/global/config"
 	"PProject/logger"
-	mid "PProject/middleware"
 	"PProject/module/message/handler"
-	"PProject/module/user"
 	"PProject/service/chat"
 	"fmt"
 	"log"
 	"net"
 	"os"
+	"time"
 
 	msg "PProject/module/message"
 
@@ -26,21 +25,19 @@ func main() {
 	// 配置生成的ids
 
 	// 配置为 网关节点
-	global.GlobalConfig.NodeType = global.NodeTypeDataNode
-	global.GlobalConfig = global.MessageDataConfig
+	config.Global.NodeType = config.NodeTypeMsgGateWay
+	config.Global = config.MessageGatewayConfig
 
-	global.ConfigIds()
-	global.ConfigRedis()
-	global.ConfigMgo()
-	global.ConfigMiddleware()
-	global.ConfigKafka()
-
-	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
+	config.ConfigIds()
+	config.ConfigRedis()
+	config.ConfigMgo()
+	config.ConfigMiddleware()
+	config.ConfigKafka(msg.HandlerTopicMessage)
 
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
 	if gwID == "" {
-		gwID = global.GlobalConfig.GatewayNodeId
+		gwID = config.Global.NodeId
 	}
 	routerAddr := os.Getenv("ROUTER_ADDR")
 	if routerAddr == "" {
@@ -72,7 +69,7 @@ func main() {
 
 	// 4) Start gRPC service
 	go func() {
-		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", global.GlobalConfig.GrpcPort))
+		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Global.GrpcPort))
 		if err != nil {
 			logger.Errorf("gRPC listen failed: %v", err)
 		}
@@ -87,7 +84,7 @@ func main() {
 		healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
 		healthServer.SetServingStatus("gateway.GatewayControl", healthpb.HealthCheckResponse_SERVING)
 
-		logger.Infof("[gRPC] Listening on :%d", global.GlobalConfig.GrpcPort)
+		logger.Infof("[gRPC] Listening on :%d", config.Global.GrpcPort)
 		if err := gs.Serve(lis); err != nil {
 			logger.Errorf("gRPC server failed: %v", err)
 		}
@@ -100,15 +97,26 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	r.GET("/chat", g.HandleWS) // e.g. ws://localhost:8080/chat?user=A&to=B
-	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
-	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
-	mid.POST(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
-	//r.POST("/check", user.HandlerCheck)
-	//r.POST("/user")
+	r.GET("/chat", g.HandleWS)
 
-	logger.Infof("[HTTP] Listening on :%d", global.GlobalConfig.Port)
-	if err := r.Run(fmt.Sprintf(":%d", global.GlobalConfig.Port)); err != nil {
+	logger.Infof("[HTTP] Listening on :%d", config.Global.Port)
+	if err := r.Run(fmt.Sprintf(":%d", config.Global.Port)); err != nil {
 		logger.Errorf("HTTP server failed: %v", err)
 	}
+
+	//if global.Global.NodeType == global.NodeTypeMsgGateWay {
+	//	// e.g. ws://localhost:8080/chat?user=A&to=B
+	//} else {
+	//	if global.Global.NodeType == global.NodeTypeApiNode {
+	//		mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
+	//		mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
+	//		mid.POST(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
+	//
+	//
+	//}
+
+	for {
+		time.Sleep(time.Second)
+	}
+
 }

@@ -56,7 +56,7 @@ func GenTopics(app AppConfig) []string {
 	var out []string
 
 	for _, mc := range app.MessageConfigs {
-		for _, pat := range mc.TopicPattern {
+		for _, pat := range mc.Keys() {
 			for _, t := range expandPattern(string(pat), mc.TopicCount) {
 				if _, ok := seen[t]; ok {
 					continue
@@ -73,7 +73,7 @@ func GenTopics(app AppConfig) []string {
 // 1) 显式 printf: "topic-%02d"
 // 2) 花括号占位:  "topic-{i}"
 // 3) 无占位时:    "topic" => "topic-0"... (自动追加 "-%d")
-func expandPattern(pattern string, n int) []string {
+func expandPattern1(pattern string, n int) []string {
 	if n <= 0 {
 		// 兼容：当 n<=0 时按 1 扩展
 		n = 1

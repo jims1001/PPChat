@@ -1,6 +1,7 @@
 package kafka
 
 import (
+	pb "PProject/gen/message"
 	"fmt"
 	"strings"
 
@@ -17,35 +18,57 @@ const MessageTypeDataReceiver = 2
 const MessageTypeCAck = 2 //客户端回执消息
 type MessageHandlerConfig struct {
 	Handler               MessageHandler
-	MessageType           int
-	TopicPattern          string
+	MessageType           pb.MessageFrameData_Type
+	SendTopicPattern      string
+	ReceiveTopicPattern   string
 	TopicCount            int
 	ReplicationFactor     int
 	ConsumerInitialOffset string
 	IsConsumer            bool // 当前节点是否需要消费
+	NodeId                string
 }
 
 func NewMessageHandlerConfig() *MessageHandlerConfig {
 	return &MessageHandlerConfig{}
 }
 
-func (c *MessageHandlerConfig) Keys() []string {
+func (c *MessageHandlerConfig) genKeys(pattern string, count int, isNeedNode bool) []string {
+	keys := make([]string, 0, count)
 
-	hasPrintf := strings.Contains(c.TopicPattern, "%d")
-	hasBrace := strings.Contains(c.TopicPattern, "{i}")
+	if isNeedNode {
+		pattern = fmt.Sprintf("%v_%v", c.NodeId, pattern)
+	}
 
-	out := make([]string, 0, c.TopicCount)
-	for i := 0; i < c.TopicCount; i++ {
+	for i := 0; i < count; i++ {
 		switch {
-		case hasPrintf:
-			out = append(out, fmt.Sprintf(c.TopicPattern, i))
-		case hasBrace:
-			out = append(out, strings.ReplaceAll(c.TopicPattern, "{i}", fmt.Sprintf("%d", i)))
+		case strings.Contains(pattern, "%d"):
+			keys = append(keys, fmt.Sprintf(pattern, i))
+		case strings.Contains(pattern, "{i}"):
+			keys = append(keys, strings.ReplaceAll(pattern, "{i}", fmt.Sprintf("%d", i)))
 		default:
-			out = append(out, fmt.Sprintf("%s-%d", c.TopicPattern, i))
+			keys = append(keys, fmt.Sprintf("%s-%d", pattern, i))
 		}
 	}
+	return keys
+}
+
+func (c *MessageHandlerConfig) Keys() []string {
+	var out []string
+	if c.IsConsumer {
+		out = append(out, c.genKeys(c.SendTopicPattern, c.TopicCount, true)...)
+	} else {
+		out = append(out, c.genKeys(c.ReceiveTopicPattern, c.TopicCount, true)...)
+	}
+
 	return out
+}
+
+func (c *MessageHandlerConfig) SendTopicKeys() []string {
+	return c.genKeys(c.SendTopicPattern, c.TopicCount, true)
+}
+
+func (c *MessageHandlerConfig) ReceiveTopicKeys(isNeedNode bool) []string {
+	return c.genKeys(c.ReceiveTopicPattern, c.TopicCount, isNeedNode)
 }
 
 // AppConfig In-code 配置（不读 YAML）
@@ -66,7 +89,7 @@ func NewAppConfig() *AppConfig {
 	return &AppConfig{}
 }
 
-func (c *AppConfig) GetTopicKeys(messageType int) []string {
+func (c *AppConfig) GetTopicKeys(messageType pb.MessageFrameData_Type) []string {
 
 	for _, config := range c.MessageConfigs {
 		if config.MessageType == messageType {
@@ -76,7 +99,7 @@ func (c *AppConfig) GetTopicKeys(messageType int) []string {
 	return nil
 }
 
-func (c *AppConfig) GetMessageHandlerConfig(messageType int) *MessageHandlerConfig {
+func (c *AppConfig) GetMessageHandlerConfig(messageType pb.MessageFrameData_Type) *MessageHandlerConfig {
 	for _, config := range c.MessageConfigs {
 		if config.MessageType == messageType {
 			return &config
@@ -88,12 +111,7 @@ func (c *AppConfig) GetMessageHandlerConfig(messageType int) *MessageHandlerConf
 func (c *AppConfig) GetAllTopicKeys() []string {
 	var out []string
 	for _, config := range c.MessageConfigs {
-
 		// 如果不需要消费 就需要监听
-		if !config.IsConsumer {
-			continue
-		}
-
 		keys := config.Keys()
 		out = append(out, keys...)
 	}
@@ -116,7 +134,7 @@ var Cfg = AppConfig{
 	Brokers: []string{"127.0.0.1:9092"},
 	//TopicPattern:            "im.shard-%02d",
 	//TopicCount:              2, // 改成 64/128 即可
-	PartitionsPerTopic:      2, // 单机演示
+	PartitionsPerTopic:      1, // 单机演示
 	ReplicationFactor:       1, // 单机演示
 	ProducerRetries:         5,
 	ProducerCompression:     "snappy",

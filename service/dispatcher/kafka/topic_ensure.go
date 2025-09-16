@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -108,22 +109,15 @@ import (
 
 // ------------ 自动创建 topic（可选） ------------
 
-// EnsureTopics 根据 MessageConfigs 创建缺失的 topics。
-// - partitions: 若你没有在配置里给出，我们默认 3；可根据需要改成参数。
-// - replication 取自每个 MessageHandlerConfig.ReplicationFactor；<=0 时退化为 1。
-// - 已存在则忽略。
 func EnsureTopics(ctx context.Context, app AppConfig) error {
 	if len(app.Brokers) == 0 {
 		return fmt.Errorf("no brokers provided")
 	}
-	// 聚合所有 config 各自的 KafkaVersion，取最小/最老以保证兼容；
-	// 简化起见：如果多个版本不一致，这里用第一个非零版本，否则 V2_1_0_0。
-	kver := sarama.V2_1_0_0
-	for _, _ = range app.MessageConfigs {
-		if app.KafkaVersion != (sarama.KafkaVersion{}) {
-			kver = app.KafkaVersion
-			break
-		}
+
+	// 1) Kafka 版本：优先用 App 级；为空回退默认
+	kver := app.KafkaVersion
+	if kver == (sarama.KafkaVersion{}) {
+		kver = sarama.V2_1_0_0
 	}
 
 	cfg := sarama.NewConfig()
@@ -137,14 +131,13 @@ func EnsureTopics(ctx context.Context, app AppConfig) error {
 	if err != nil {
 		return fmt.Errorf("new cluster admin: %w", err)
 	}
-	defer func(admin sarama.ClusterAdmin) {
-		err := admin.Close()
-		if err != nil {
-			logger.Errorf("close cluster admin: %w", err)
+	defer func() {
+		if e := admin.Close(); e != nil {
+			logger.Errorf("close cluster admin: %v", e)
 		}
-	}(admin)
+	}()
 
-	// 获取已存在 topics，避免重复创建（也可以直接 Create 并忽略 TopicAlreadyExists）
+	// 2) 获取已存在 topics：key 即为 topic 名称
 	existing, err := admin.ListTopics()
 	if err != nil {
 		return fmt.Errorf("list topics: %w", err)
@@ -157,55 +150,100 @@ func EnsureTopics(ctx context.Context, app AppConfig) error {
 		configEntries     map[string]*string
 	}
 
-	var plans []topicPlan
+	const defaultPartitions = int32(3)
+
+	// 用 map 聚合，避免跨 mc 重复
+	planMap := make(map[string]topicPlan, 64)
+
+	// 通用默认配置
+	baseRetentionMs := fmt.Sprintf("%d", 7*24*60*60*1000) // 7天
+	segmentBytes := fmt.Sprintf("%d", 1<<30)              // 1 GiB
 
 	for _, mc := range app.MessageConfigs {
 		if !app.AutoCreateTopicsOnStart {
+			// 两侧都没打开自动创建，就跳过
 			continue
 		}
+
 		rep := int16(mc.ReplicationFactor)
 		if rep <= 0 {
 			rep = 1
 		}
-		// 你也可以把 partitions 加到 MessageHandlerConfig；这里先采用一个合理默认
-		const defaultPartitions = int32(3)
+		// min.insync.replicas 跟随副本数：至少1，尽量设置为rep-1
+		minISR := "1"
+		if rep > 1 {
+			minISR = fmt.Sprintf("%d", rep-1)
+		}
 
-		// 常见配置：保留 7 天、按大小与时间滚动、删除策略
-		retentionMs := fmt.Sprintf("%d", 7*24*60*60*1000)
-		segmentBytes := fmt.Sprintf("%d", 1<<30) // 1 GiB
 		cfgs := map[string]*string{
 			"cleanup.policy":                 ptr("delete"),
-			"retention.ms":                   &retentionMs,
+			"retention.ms":                   &baseRetentionMs,
 			"segment.bytes":                  &segmentBytes,
-			"min.insync.replicas":            ptr("1"),
+			"min.insync.replicas":            &minISR,
 			"unclean.leader.election.enable": ptr("false"),
 		}
 
-		for _, pat := range mc.TopicPattern {
-			for _, t := range expandPattern(string(pat), mc.TopicCount) {
-				if _, ok := existing[t]; ok {
-					continue
-				}
-				plans = append(plans, topicPlan{
-					name:              t,
-					partitions:        defaultPartitions,
-					replicationFactor: rep,
-					configEntries:     cfgs,
-				})
+		// 统一展开 -> candidate 名单
+		candidates := make([]string, 0, mc.TopicCount*2)
+		candidates = append(candidates, expandPatterns([]string{mc.SendTopicPattern}, mc.TopicCount)...)
+		candidates = append(candidates, expandPatterns([]string{mc.ReceiveTopicPattern}, mc.TopicCount)...)
+
+		// 分区数支持 mc 自定义（若你在 MessageHandlerConfig 里加了 Partitions 字段）
+		partitions := defaultPartitions
+		if v := getPartitionsFromMC(mc); v > 0 {
+			partitions = v
+		}
+
+		for _, t := range candidates {
+			if _, ok := existing[t]; ok {
+				// 已存在，不再创建；但仍可考虑后续校验/对齐配置（如需）
+				continue
+			}
+			if _, dup := planMap[t]; dup {
+				continue
+			}
+			planMap[t] = topicPlan{
+				name:              t,
+				partitions:        partitions,
+				replicationFactor: rep,
+				configEntries:     cfgs,
 			}
 		}
 
-		RegisterDefaultHandlers(mc.Keys(), mc.Handler)
+		// —— 注册 handler —— //
+		switch {
+		case hasMethod(mc, "SendTopicKeys") && hasMethod(mc, "ReceiveTopicKeys"):
+			// 如果已经实现了前面你拆分出的两个方法，优先使用
+			if sendKeys := safeSendKeys(mc); len(sendKeys) > 0 {
+				RegisterDefaultHandlers(sendKeys, mc.Handler)
+			}
+			if recvKeys := safeRecvKeys(mc); len(recvKeys) > 0 {
+				RegisterDefaultHandlers(recvKeys, mc.Handler)
+			}
+		default:
+			// 兼容老接口：Keys() 合并返回
+			RegisterDefaultHandlers(mc.Keys(), mc.Handler)
+		}
 	}
 
-	for _, p := range plans {
+	// 3) 排序后批量创建（幂等）
+	if len(planMap) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(planMap))
+	for k := range planMap {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		p := planMap[name]
 		detail := &sarama.TopicDetail{
 			NumPartitions:     p.partitions,
 			ReplicationFactor: p.replicationFactor,
 			ConfigEntries:     p.configEntries,
 		}
 		if err := admin.CreateTopic(p.name, detail, false); err != nil {
-			// 幂等：忽略已存在错误
 			if !isTopicExistsErr(err) {
 				return fmt.Errorf("create topic %q: %w", p.name, err)
 			}
@@ -215,6 +253,53 @@ func EnsureTopics(ctx context.Context, app AppConfig) error {
 	return nil
 }
 
+// —— helpers ——
+
+// 展开一组 pattern（支持 "%d" / "{i}" / 默认后缀 -i）
+func expandPatterns(patterns []string, count int) []string {
+	out := make([]string, 0, len(patterns)*max(1, count))
+	for _, pat := range patterns {
+		out = append(out, expandPattern(pat, count)...)
+	}
+	return out
+}
+
+func expandPattern(pattern string, count int) []string {
+	keys := make([]string, 0, max(1, count))
+	for i := 0; i < max(1, count); i++ {
+		switch {
+		case strings.Contains(pattern, "%d"):
+			keys = append(keys, fmt.Sprintf(pattern, i))
+		case strings.Contains(pattern, "{i}"):
+			keys = append(keys, strings.ReplaceAll(pattern, "{i}", fmt.Sprintf("%d", i)))
+		default:
+			keys = append(keys, fmt.Sprintf("%s-%d", pattern, i))
+		}
+	}
+	return keys
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+func ptr[T any](v T) *T { return &v }
+
+// 若你在 MessageHandlerConfig 中新增了 Partitions 字段，这里读取；没有就返回 0
+func getPartitionsFromMC(mc MessageHandlerConfig) int32 {
+	// 伪代码：按你的结构体自行调整
+	// if mc.Partitions > 0 { return int32(mc.Partitions) }
+	return 0
+}
+
+// 下面两个是“安全调用”占位；如果你已经实现了 SendTopicKeys()/ReceiveTopicKeys() 就直接调；
+// 若还没有，就可以删掉 hasMethod/safeXxx 相关代码，直接用 Keys()。
+func hasMethod(any interface{}, name string) bool   { return true } // 简化：根据你实际情况删掉
+func safeSendKeys(mc MessageHandlerConfig) []string { return mc.SendTopicKeys() }
+func safeRecvKeys(mc MessageHandlerConfig) []string { return mc.ReceiveTopicKeys(true) }
+
 func isTopicExistsErr(err error) bool {
 	// 兼容不同版本的错误字符串/类型
 	if errors.Is(err, sarama.ErrTopicAlreadyExists) {
@@ -223,6 +308,3 @@ func isTopicExistsErr(err error) bool {
 	// 有的 broker 返回的是普通 error 文本
 	return strings.Contains(strings.ToLower(err.Error()), "already exists")
 }
-
-func strPtr(s string) *string { return &s }
-func ptr(s string) *string    { return &s }
