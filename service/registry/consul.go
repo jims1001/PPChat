@@ -2,7 +2,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -24,7 +23,7 @@ func NewConsul(addr string) (*ConsulRegistry, error) {
 	return &ConsulRegistry{cli: cli}, nil
 }
 
-// 本示例用 TTL 主动上报：不需要 HTTP 健康检查
+// Register 本示例用 TTL 主动上报：不需要 HTTP 健康检查
 func (r *ConsulRegistry) Register(ctx context.Context, inst Instance, _ RegisterOptions) error {
 	check := &api.AgentServiceCheck{
 		TTL:                            "10s", // TTL 窗口（上报要小于这个间隔）
@@ -103,14 +102,16 @@ func (r *ConsulRegistry) Watch(ctx context.Context, service string) (Watcher, er
 
 func (r *ConsulRegistry) Close() error { return nil }
 
-// Active TTL reporting
-// checkID: "service:<service-id>" 或你自定义的独立检查 ID
-// status: "pass" | "warn" | "fail"
-func (r *ConsulRegistry) AgentUpdateTTL(checkID, output, status string) error {
-	return r.cli.Agent().UpdateTTL(checkID, output, status)
-}
-
-// Helper（仅当你要改回 HTTP 健康时有用）
-func HealthURL(host string, port int) string {
-	return fmt.Sprintf("http://%s:%d/health", host, port)
+func (r *ConsulRegistry) UpdateTTL(checkID, note, status string) error {
+	// checkID 形如 "service:<ServiceID>"
+	var st = api.HealthAny
+	switch status {
+	case "passing":
+		st = api.HealthPassing
+	case "warning":
+		st = api.HealthWarning
+	default:
+		st = api.HealthPassing
+	}
+	return r.cli.Agent().UpdateTTL(checkID, note, st)
 }

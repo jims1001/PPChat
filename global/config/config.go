@@ -7,9 +7,11 @@ import (
 	mid "PProject/middleware"
 	"PProject/service/dispatcher/kafka"
 	mgoSrv "PProject/service/mgo"
+	"PProject/service/registry"
 	redis "PProject/service/storage/redis"
 	ids "PProject/tools/ids"
 	"context"
+	"strings"
 
 	"github.com/Shopify/sarama"
 )
@@ -159,8 +161,20 @@ func ConfigKafka(handler kafka.MessageHandler) {
 		}
 
 		keys := kafka.Cfg.GetAllTopicKeys()
+
+		receiveKeys := kafka.Cfg.GetAllTopicKeys()
+		err := registry.Global().RegisterMethod(&ctx, "GetSenderTopicKey", map[string]string{
+			"keys": strings.Join(receiveKeys, ","),
+		})
+		if err != nil {
+			return
+		}
+
 		// 5) 启动 ConsumerGroup
-		_, err := kafka.BootConsumers(keys)
+		_, err = kafka.BootConsumers(keys)
+
+		// 注册所有的 提供的Topic
+
 		if err != nil {
 			return
 		}
@@ -175,6 +189,11 @@ func ConfigKafka(handler kafka.MessageHandler) {
 
 func ConfigMiddleware() {
 	mid.Config()
+}
+
+func ConfigRegistry(name, nodeId string) {
+	RunService(name, nodeId, Global.Port,
+		map[string]string{"zone": "az1", "weight": "2", "nodeId": "gateway_01"})
 }
 
 func GetTenantID() string {

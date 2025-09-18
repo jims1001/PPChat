@@ -6,6 +6,8 @@ import (
 	"PProject/logger"
 	"PProject/module/message/handler"
 	"PProject/service/chat"
+	"PProject/service/registry"
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -24,15 +26,27 @@ func main() {
 
 	// 配置生成的ids
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	// 配置为 网关节点
 	config.Global.NodeType = config.NodeTypeDataNode
 	config.Global = config.MessageDataConfig
-
+	config.ConfigRegistry("data-service", config.Global.NodeId)
 	config.ConfigIds()
 	config.ConfigRedis()
 	config.ConfigMgo()
 	config.ConfigMiddleware()
 	config.ConfigKafka(msg.HandlerTopicMessage)
+
+	err := registry.Global().StartWatch(ctx, "chat-service-GetSenderTopicKey")
+	if err != nil {
+		logger.Errorf("start watch err: %v", err)
+	}
+	time.AfterFunc(5*time.Second, func() {
+		if inst, ok := registry.Global().Pick("chat-service-GetSenderTopicKey", nil); ok {
+			logger.Infof("inst :%v", inst)
+		}
+	})
 
 	//mid.Manager().Add(midsec.Middleware(midsec.DefaultOptions()))
 

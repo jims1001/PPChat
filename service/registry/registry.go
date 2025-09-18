@@ -28,6 +28,7 @@ type Registry interface {
 	List(ctx context.Context, service string) ([]Instance, error)
 	Watch(ctx context.Context, service string) (Watcher, error)
 	Close() error
+	UpdateTTL(checkID string, note string, status string) error // 新增
 }
 
 type Watcher interface {
