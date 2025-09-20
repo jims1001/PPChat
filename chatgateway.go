@@ -32,7 +32,7 @@ func main() {
 
 	// 配置为 网关节点
 	config.Global.NodeType = config.NodeTypeMsgGateWay
-	config.Global = config.MessageGatewayConfig
+	config.Global = config.MessageGatewayConfigV1
 	config.ConfigRegistry("chat-service", config.Global.NodeId)
 	config.ConfigIds()
 	config.ConfigRedis()

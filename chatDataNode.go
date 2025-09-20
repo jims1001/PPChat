@@ -44,7 +44,7 @@ func main() {
 	}
 	time.AfterFunc(5*time.Second, func() {
 		if inst, ok := registry.Global().Pick("chat-service-GetSenderTopicKey", nil); ok {
-			logger.Infof("inst :%v", inst)
+			logger.Infof("inst :%v meta :%v", inst, inst.Metadata)
 		}
 	})
 
