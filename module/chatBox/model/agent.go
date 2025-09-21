@@ -168,3 +168,160 @@ func (sess *RolePermission) Collection() *mongo.Collection {
 //C. 重发邀请
 //
 //关闭上一条未用的验证记录（或直接再插一条新记录，旧的在 TTL 后自动过期）；发送新邮件。
+
+type AgentConversation struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	TenantID       string             `bson:"tenant_id"     json:"tenant_id"`
+	ConversationID string             `bson:"conversation_id" json:"conversation_id"`
+	AgentID        string             `bson:"agent_id"      json:"agent_id"`
+	ContactID      string             `bson:"contact_id"    json:"contact_id"`                // 联系人ID
+	InboxID        string             `bson:"inbox_id"      json:"inbox_id"`                  // 收件箱ID
+	TeamID         string             `bson:"team_id,omitempty"     json:"team_id,omitempty"` // 已分配的团队
+	Priority       string             `bson:"priority"              json:"priority"`          // none|low|normal|high|urgent
+	TagIDs         []string           `bson:"tag_ids,omitempty"     json:"tag_ids,omitempty"` // 对话标签
+
+	Role     string     `bson:"role"     json:"role"`   // "assignee" | "collaborator" | "observer"
+	Status   string     `bson:"status"   json:"status"` // active/inactive
+	JoinedAt time.Time  `bson:"joined_at" json:"joined_at"`
+	LeftAt   *time.Time `bson:"left_at,omitempty" json:"left_at,omitempty"`
+
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+}
+
+func (sess *AgentConversation) GetTableName() string {
+	return "chatbox_agent_conversation"
+}
+
+func (sess *AgentConversation) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+//+------------------+          +----------------------+          +------------------------+
+//|  Conversation    | 1      * |  AgentConversation   | *      1 |        Agent           |
+//|------------------|----------|----------------------|----------|------------------------|
+//| id               |          | id                   |          | id                     |
+//| tenant_id        |          | conversation_id      |          | tenant_id              |
+//| assignee_id (*)  |          | agent_id             |          | name                   |
+//| subject          |          | role (assignee)      |          | email                  |
+//| status           |          | status               |          | role                   |
+//+------------------+          +----------------------+          +------------------------+
+//|
+//| 1
+//|
+//|      *
+//+------------------------+
+//|  AgentCollaborator     |
+//|------------------------|
+//| id                     |
+//| tenant_id              |
+//| conversation_id        |
+//| agent_id               |
+//| role (collaborator)    |
+//| status (active/inact)  |
+//| joined_at              |
+//| left_at                |
+//+------------------------+
+
+// 协作者关联表
+type AgentCollaborator struct {
+	ID             primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	TenantID       string             `bson:"tenant_id" json:"tenant_id"`
+	ConversationID string             `bson:"conversation_id" json:"conversation_id"` // 聊天ID
+	AgentID        string             `bson:"agent_id" json:"agent_id"`               // 代理ID
+
+	Role     string     `bson:"role" json:"role"`     // collaborator 固定值；也可以支持 observer
+	Status   string     `bson:"status" json:"status"` // active | inactive
+	JoinedAt time.Time  `bson:"joined_at" json:"joined_at"`
+	LeftAt   *time.Time `bson:"left_at,omitempty" json:"left_at,omitempty"`
+}
+
+func (sess *AgentCollaborator) GetTableName() string {
+	return "chatbox_agent_conversation"
+}
+
+func (sess *AgentCollaborator) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+// AgentContact 客服联系人
+type AgentContact struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"         json:"id,omitempty"`
+	TenantID string             `bson:"tenant_id"             json:"tenant_id"` // 租户ID，区分不同租户
+	Name     string             `bson:"name"                  json:"name"`      // 联系人姓名
+	Email    string             `bson:"email,omitempty"       json:"email,omitempty"`
+	Phone    string             `bson:"phone,omitempty"       json:"phone,omitempty"`
+	Company  string             `bson:"company,omitempty"     json:"company,omitempty"`
+	Country  string             `bson:"country,omitempty"     json:"country,omitempty"`
+	City     string             `bson:"city,omitempty"        json:"city,omitempty"`
+
+	FacebookURL string `bson:"facebook_url,omitempty" json:"facebook_url,omitempty"`
+	TwitterURL  string `bson:"twitter_url,omitempty"  json:"twitter_url,omitempty"`
+	LinkedinURL string `bson:"linkedin_url,omitempty" json:"linkedin_url,omitempty"`
+	GithubURL   string `bson:"github_url,omitempty"   json:"github_url,omitempty"`
+
+	Notes string `bson:"notes,omitempty"        json:"notes,omitempty"` // 简介/备注
+
+	CreatedAt time.Time `bson:"created_at,omitempty"   json:"created_at,omitempty"`
+	UpdatedAt time.Time `bson:"updated_at,omitempty"   json:"updated_at,omitempty"`
+}
+
+func (sess *AgentContact) GetTableName() string {
+	return "chatbox_agent_contact"
+}
+
+func (sess *AgentContact) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+type AgentConversationMeta struct {
+	StartedAt   time.Time `bson:"started_at,omitempty"    json:"started_at,omitempty"`
+	Browser     string    `bson:"browser,omitempty"       json:"browser,omitempty"`
+	BrowserLang string    `bson:"browser_lang,omitempty"  json:"browser_lang,omitempty"`
+	OS          string    `bson:"os,omitempty"            json:"os,omitempty"`
+	IPAddress   string    `bson:"ip_address,omitempty"    json:"ip_address,omitempty"`
+	Country     string    `bson:"country,omitempty"       json:"country,omitempty"`
+	City        string    `bson:"city,omitempty"          json:"city,omitempty"`
+	Referrer    string    `bson:"referrer,omitempty"      json:"referrer,omitempty"`
+	UserAgent   string    `bson:"user_agent,omitempty"    json:"user_agent,omitempty"`
+}
+
+func (sess *AgentConversationMeta) GetTableName() string {
+	return "chatbox_agent_conversation_meta"
+}
+
+func (sess *AgentConversationMeta) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+// AgentBot {
+// "_id": { "$oid": "650c2f82d91c34a9e8b4d111" },
+// "tenant_id": "tenant_001",
+// "name": "FAQ机器人",
+// "avatar_url": "https://example.com/bot-avatar.png",
+// "description": "用于自动回答常见问题的机器人",
+// "webhook_url": "https://example.com/webhook",
+// "status": "enabled",
+// "created_at": { "$date": "2025-09-21T02:30:00Z" },
+// "updated_at": { "$date": "2025-09-21T02:30:00Z" }
+// }
+type AgentBot struct {
+	ID          primitive.ObjectID `bson:"_id,omitempty"    json:"id,omitempty"`
+	TenantID    string             `bson:"tenant_id"        json:"tenant_id"`                  // 租户ID
+	Name        string             `bson:"name"             json:"name"`                       // 机器人名称
+	AvatarURL   string             `bson:"avatar_url,omitempty" json:"avatar_url,omitempty"`   // 机器人头像
+	Description string             `bson:"description,omitempty" json:"description,omitempty"` // 描述
+	WebhookURL  string             `bson:"webhook_url,omitempty" json:"webhook_url,omitempty"` // 回调 Webhook 地址
+
+	Status    string    `bson:"status"           json:"status"` // 启用/禁用
+	CreatedAt time.Time `bson:"created_at"       json:"created_at"`
+	UpdatedAt time.Time `bson:"updated_at"       json:"updated_at"`
+}
+
+func (sess *AgentBot) GetTableName() string {
+	return "chatbox_agent_bot"
+}
+
+func (sess *AgentBot) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}

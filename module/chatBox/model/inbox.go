@@ -353,3 +353,71 @@ type PreChatField struct {
 	Label       string `bson:"label"      json:"label"`    // 显示标签
 	Placeholder string `bson:"placeholder" json:"placeholder"`
 }
+
+// WidgetSetting {
+// "tenant_id": "tenant001",
+// "account_id": "135774",
+// "inbox_id": "inbox001",
+// "website_name": "家具销售",
+// "website_avatar": "https://cdn.example.com/logo.png",
+// "welcome_title": "你好！",
+// "welcome_tagline": "如有疑问，请联系我们",
+// "reply_time": "通常在几分钟内回复您",
+// "theme_color": "#007BFF",
+// "bubble_position": "right",
+// "bubble_type": "standard",
+// "launcher_text": "联系我们",
+// "updated_at": "2025-09-20T17:00:00Z"
+// }
+// WidgetSetting 网站渠道小部件配置
+type WidgetSetting struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"   json:"_id,omitempty"`
+	TenantID  string             `bson:"tenant_id"       json:"tenant_id"`
+	AccountID string             `bson:"account_id"      json:"account_id"`
+	InboxID   string             `bson:"inbox_id"        json:"inbox_id"`
+
+	WebsiteName    string `bson:"website_name"     json:"website_name"`
+	WebsiteAvatar  string `bson:"website_avatar"   json:"website_avatar,omitempty"` // logo url
+	WelcomeTitle   string `bson:"welcome_title"    json:"welcome_title,omitempty"`
+	WelcomeTagline string `bson:"welcome_tagline"  json:"welcome_tagline,omitempty"`
+
+	ReplyTime  string `bson:"reply_time"       json:"reply_time,omitempty"` // "几分钟内回复"
+	ThemeColor string `bson:"theme_color"      json:"theme_color"`          // 小部件颜色 HEX
+
+	BubblePosition string `bson:"bubble_position"  json:"bubble_position"` // left | right
+	BubbleType     string `bson:"bubble_type"      json:"bubble_type"`     // standard | expanded
+	LauncherText   string `bson:"launcher_text"    json:"launcher_text,omitempty"`
+
+	UpdatedAt time.Time `bson:"updated_at"    json:"updated_at"`
+}
+
+func (sess *WidgetSetting) GetTableName() string {
+	return "chatbox_inbox_widget_setting"
+}
+
+func (sess *WidgetSetting) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
+
+// InboxConfig 网站渠道配置
+type InboxWebSiteConfig struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"    json:"_id,omitempty"`
+	TenantID  string             `bson:"tenant_id"        json:"tenant_id"`
+	AccountID string             `bson:"account_id"       json:"account_id"`
+	InboxID   string             `bson:"inbox_id"         json:"inbox_id"`
+
+	WebsiteToken string `bson:"website_token"    json:"website_token"` // 脚本中用的 token
+	BaseURL      string `bson:"base_url"         json:"base_url"`      // SDK 加载地址
+	AuthToken    string `bson:"auth_token"       json:"auth_token"`    // 用户身份验证签名 key
+	ForceAuth    bool   `bson:"force_auth"       json:"force_auth"`    // 是否启用强制身份验证
+
+	UpdatedAt time.Time `bson:"updated_at"         json:"updated_at"`
+}
+
+func (sess *InboxWebSiteConfig) GetTableName() string {
+	return "chatbox_inbox_web_site_config"
+}
+
+func (sess *InboxWebSiteConfig) Collection() *mongo.Collection {
+	return mgo.GetDB().Collection(sess.GetTableName())
+}
