@@ -106,7 +106,7 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 					logger.Infof("[PingHandler] renew after biz write returned false")
 				}
 
-				logger.Infof("ping expire is sucess")
+				//logger.Infof("ping expire is sucess")
 
 				if err := conn.Conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
 					logger.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)

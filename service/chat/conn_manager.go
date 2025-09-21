@@ -153,19 +153,74 @@ func (m *ConnManager) Add(user string, sid string, conn *websocket.Conn) {
 	m.byUser[user] = map[string]*WsConn{sid: w}
 }
 
-// Get Get: 旧接口——返回该用户的一条连接（若有多条，返回任意一条）
-func (m *ConnManager) Get(user string) (*websocket.Conn, bool) {
+// GetAll 返回该用户的所有连接
+func (m *ConnManager) GetAll(user string) []*websocket.Conn {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
+	var conns []*websocket.Conn
+
+	// 旧索引（可能只有一条）
+	if c, ok := m.conns[user]; ok && c != nil {
+		conns = append(conns, c)
+	}
+
+	// 新索引（可能多条）
+	if mm := m.byUser[user]; mm != nil {
+		for _, w := range mm {
+			if w.Conn != nil {
+				conns = append(conns, w.Conn)
+			}
+		}
+	}
+
+	return conns
+}
+
+// Get Get: 旧接口——返回该用户的一条连接（若有多条，返回任意一条）
+//func (m *ConnManager) Get(user string, connId string) (*websocket.Conn, bool) {
+//	m.mu.RLock()
+//	defer m.mu.RUnlock()
+//
+//	// 旧索引优先
+//	if c, ok := m.conns[user]; ok && c != nil {
+//		return c, true
+//	}
+//	// 新索引兜底
+//	if mm := m.byUser[user]; mm != nil {
+//		for _, w := range mm {
+//			if w.Conn != nil {
+//				return w.Conn, true
+//			}
+//		}
+//	}
+//	return nil, false
+//}
+
+// Get Get: 当 connId != "" 时精确返回该用户该连接；否则返回该用户任意一条连接（兼容旧接口）
+func (m *ConnManager) Get(user, connId string) (*websocket.Conn, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// 1) 指定了 connId：只查新索引做精确命中
+	if connId != "" {
+		if mm := m.byUser[user]; mm != nil {
+			if w, ok := mm[connId]; ok && w != nil && w.Conn != nil {
+				return w.Conn, true
+			}
+		}
+		return nil, false
+	}
+
+	// 2) 未指定 connId：保持旧语义
 	// 旧索引优先
 	if c, ok := m.conns[user]; ok && c != nil {
 		return c, true
 	}
-	// 新索引兜底
+	// 新索引兜底：任取一条
 	if mm := m.byUser[user]; mm != nil {
 		for _, w := range mm {
-			if w.Conn != nil {
+			if w != nil && w.Conn != nil {
 				return w.Conn, true
 			}
 		}

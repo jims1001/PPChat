@@ -5,8 +5,9 @@ import (
 	"PProject/logger"
 	chat "PProject/service/chat"
 	"context"
-	"google.golang.org/protobuf/encoding/protojson"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type RelayHandler struct {
@@ -63,27 +64,30 @@ func (h *RelayHandler) Run() {
 					continue
 				}
 
-				ws, res := h.ctx.S.ConnMgr().Get(msg.To)
-				if !res {
-					logger.Infof("[RelayHandler] 获取到有效的客户端   error: %v", res)
+				connList := h.ctx.S.ConnMgr().GetAll(msg.To)
+				if len(connList) == 0 {
+					logger.Infof("[RelayHandler] 获取到有效的客户端)")
 					continue
 				}
 
-				// 序列化（一次性）
-				data, err := marshaller.Marshal(msg)
-				if err != nil {
-					logger.Errorf("[RelayHandler] 解析数据出错 failed: conn_id=%s err=%v", err)
-					continue
+				for _, conn := range connList {
+					// 序列化（一次性）
+					data, err := marshaller.Marshal(msg)
+					if err != nil {
+						logger.Errorf("[RelayHandler] 解析数据出错 failed: conn_id=%s err=%v", err)
+						continue
+					}
+
+					// 发送（带写超时）
+					if err := chat.WriteJSONWithDeadline(conn, data, 5*time.Second); err != nil {
+						logger.Errorf("[RelayHandler] send failed: conn_id=%s err=%v", err)
+						// 发送失败：关闭并从管理器移除，防止死连接占用资源
+						_ = conn.Close()
+						h.ctx.S.ConnMgr().Remove(msg.To)
+						continue
+					}
 				}
 
-				// 发送（带写超时）
-				if err := chat.WriteJSONWithDeadline(ws, data, 5*time.Second); err != nil {
-					logger.Errorf("[RelayHandler] send failed: conn_id=%s err=%v", err)
-					// 发送失败：关闭并从管理器移除，防止死连接占用资源
-					_ = ws.Close()
-					h.ctx.S.ConnMgr().Remove(msg.To)
-					continue
-				}
 			}
 		}
 	}()

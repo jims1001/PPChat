@@ -60,7 +60,7 @@ func (h *AuthHandler) Run() {
 					continue
 				}
 
-				ws, res := h.ctx.S.ConnMgr().Get(msg.Conn.UserId)
+				ws, res := h.ctx.S.ConnMgr().Get(msg.Conn.UserId, msg.Frame.GetSessionId())
 				if !res {
 					logger.Infof("[AuthHandler] connMgr.GetUnAuthClient error: %v", res)
 					continue
