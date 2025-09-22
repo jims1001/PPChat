@@ -125,23 +125,32 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 	} else {
 		// 其他节点方式处理
 		//msg.WsRelayBound <- msg
-		err = msgcli.ReplayMsg(value)
-		if err != nil {
-			logger.Infof("topic key :%v Replay msg error: %s", topic, err)
-			return err
+
+		if msg.Type == pb.MessageFrameData_DATA {
+			err = msgcli.ReplayMsg(value, "")
+			if err != nil {
+				logger.Infof("topic key :%v Replay msg error: %s", topic, err)
+				return err
+			}
+		} else if msg.Type == pb.MessageFrameData_DELIVER {
+			err = msgcli.ReplayMsg(value, msg.GetSessionId())
+			if err != nil {
+				logger.Infof("topic key :%v Replay msg error: %s", topic, err)
+				return err
+			}
 		}
 
-		deliverMsg := chat.BuildSendSuccessAckDeliver(msg.From, msg.GetPayload().ClientMsgId, msg.GetPayload().ServerMsgId, msg)
-		deliverMsgData, err := util.EncodeFrame(deliverMsg)
-		if err != nil {
-			logger.Errorf("BuildSendSuccessAckDeliver EncodeFrame topic key :%v Replay msg error: %s", topic, err)
-			return err
-		}
-		err = msgcli.ReplayMsg(deliverMsgData)
-		if err != nil {
-			logger.Errorf("BuildSendSuccessAckDeliverv ReplayMsg topic key :%v Replay msg error: %s", topic, err)
-			return err
-		}
+		//deliverMsg := chat.BuildSendSuccessAckDeliver(msg.From, msg.GetPayload().ClientMsgId, msg.GetPayload().ServerMsgId, msg)
+		//deliverMsgData, err := util.EncodeFrame(deliverMsg)
+		//if err != nil {
+		//	logger.Errorf("BuildSendSuccessAckDeliver EncodeFrame topic key :%v Replay msg error: %s", topic, err)
+		//	return err
+		//}
+		//err = msgcli.ReplayMsg(deliverMsgData, msg.GetSessionId())
+		//if err != nil {
+		//	logger.Errorf("BuildSendSuccessAckDeliverv ReplayMsg topic key :%v Replay msg error: %s", topic, err)
+		//	return err
+		//}
 	}
 
 	// 下发给自己

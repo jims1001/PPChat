@@ -8,10 +8,10 @@ func init() {
 
 }
 
-func ReplayMsg(msg []byte) error {
+func ReplayMsg(msg []byte, connectId string) error {
 
 	//return nil
-	return chat.RelayMsg(msg)
+	return chat.RelayMsg(msg, connectId)
 }
 
 //// DispatchMsg 分发消息

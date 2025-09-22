@@ -186,6 +186,7 @@ func BuildSendSuccessAckDeliver(toUser string, clientMsgID string, serverMsgID s
 		Ts:        now,
 		GatewayId: req.GatewayId,
 		ConnId:    req.ConnId,
+		SessionId: req.SessionId,
 		TenantId:  req.TenantId,
 		AppId:     req.AppId,
 		Qos:       pb.MessageFrameData_QOS_AT_LEAST_ONCE,

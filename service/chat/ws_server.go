@@ -121,6 +121,8 @@ func (s *Server) HandleWS(c *gin.Context) {
 				continue
 			}
 
+			// connectId 关联上 好进行处理
+			msg.SessionId = rec.SnowID
 			err := dataHandler.Handle(&ChatContext{S: s}, msg, &WsConn{Conn: ws})
 			if err != nil {
 				logger.Infof("[HandleWS] dataHandler for message type=%d", msg.Type)

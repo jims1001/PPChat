@@ -38,6 +38,11 @@ type WSConnectionMsg struct {
 	Req   *pb.MessageFrameData
 }
 
+type WSReplayMsg struct {
+	Frame     *pb.MessageFrameData
+	ConnectId string //连接ID
+}
+
 func NewServer(gwID, routerAddr string, conn *ConnManager, msgHandler ka.ProducerHandler) (*Server, error) {
 	return &Server{
 		gwID:       gwID,
@@ -129,27 +134,51 @@ func (s *Server) LoopRelayData(ctx context.Context) {
 					continue
 				}
 
-				connList := s.connMgr.GetAll(msg.To)
-				if len(connList) == 0 {
-					logger.Infof("[数据处理] 获取到有效的客户端")
-					continue
-				}
+				if len(msg.ConnectId) > 0 {
 
-				for _, conn := range connList {
-					// 序列化（一次性）
-					data, err := marshaller.Marshal(msg)
+					ws, success := s.connMgr.Get(msg.Frame.To, msg.ConnectId)
+					if !success {
+						logger.Infof("[数据处理] 没有获取到有效的客户端")
+					}
+
+					data, err := marshaller.Marshal(msg.Frame)
 					if err != nil {
 						logger.Errorf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", err)
 						continue
 					}
 
 					// 发送（带写超时）
-					if err := writeJSONWithDeadline(conn, data, 5*time.Second); err != nil {
+					if err := writeJSONWithDeadline(ws, data, 5*time.Second); err != nil {
 						logger.Errorf("[loopConnect] send failed: conn_id=%s err=%v", err)
 						// 发送失败：关闭并从管理器移除，防止死连接占用资源
-						_ = conn.Close()
-						s.connMgr.Remove(msg.To)
+						_ = ws.Close()
+						s.connMgr.Remove(msg.Frame.To)
 						continue
+					}
+
+				} else {
+					connList := s.connMgr.GetAll(msg.Frame.To)
+					if len(connList) == 0 {
+						logger.Infof("[数据处理] 没有获取到有效的客户端")
+						continue
+					}
+
+					for _, conn := range connList {
+						// 序列化（一次性）
+						data, err := marshaller.Marshal(msg.Frame)
+						if err != nil {
+							logger.Errorf("[数据处理] 解析数据出错 failed: conn_id=%s err=%v", err)
+							continue
+						}
+
+						// 发送（带写超时）
+						if err := writeJSONWithDeadline(conn, data, 5*time.Second); err != nil {
+							logger.Errorf("[loopConnect] send failed: conn_id=%s err=%v", err)
+							// 发送失败：关闭并从管理器移除，防止死连接占用资源
+							_ = conn.Close()
+							s.connMgr.Remove(msg.Frame.To)
+							continue
+						}
 					}
 				}
 
@@ -220,21 +249,22 @@ func (s *Server) loopRouter() error {
 func (s *Server) Outbound() chan *pb.MessageFrame { return WsOutbound }
 
 // RelayBound  得到一个转发的 消息通道
-func (s *Server) RelayBound() chan *pb.MessageFrameData {
+func (s *Server) RelayBound() chan *WSReplayMsg {
 	return WsRelayBound
 }
 
-func RelayMsg(msgData []byte) error {
+func RelayMsg(msgData []byte, conectId string) error {
 
 	msgObj, err := ParseFrameJSON(msgData)
 	if err != nil {
 		return err
 	}
-	WsRelayBound <- msgObj
+
+	WsRelayBound <- &WSReplayMsg{Frame: msgObj, ConnectId: conectId}
 	return nil
 }
 
 // WsOutbound package-scope channel shared with ws_server.go for simplicity
 var WsOutbound = make(chan *pb.MessageFrame, 8192)
 
-var WsRelayBound = make(chan *pb.MessageFrameData, 8192)
+var WsRelayBound = make(chan *WSReplayMsg, 8192)

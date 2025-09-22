@@ -47,7 +47,7 @@ func HandlerCAckTopicMessage(topic string, key, value []byte) error {
 
 				replayMsgData, err := util.EncodeFrame(replayMsg)
 
-				err = msgcli.ReplayMsg(replayMsgData)
+				err = msgcli.ReplayMsg(replayMsgData, msg.GetSessionId())
 				if err != nil {
 					logger.Errorf("topic key :%v Parse msg error: %s", topic, err)
 					return err
