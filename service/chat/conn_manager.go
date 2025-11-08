@@ -57,7 +57,9 @@ type WsConn struct {
 }
 
 type ConnManager struct {
-	mu     sync.RWMutex
+	mu sync.RWMutex
+
+	//TODO 成熟了 需要去掉掉 使用 byUser 来存储 当前的会话
 	conns  map[string]*websocket.Conn    // 兼容旧版：userID -> 任意一条连接
 	bySnow map[string]*WsConn            // 主索引：snowID -> wsConn
 	byUser map[string]map[string]*WsConn // 辅助索引：userID -> (snowID -> wsConn)
@@ -160,10 +162,11 @@ func (m *ConnManager) GetAll(user string) []*websocket.Conn {
 
 	var conns []*websocket.Conn
 
+	//TODO 不需要处理 通过 byUser 来存储
 	// 旧索引（可能只有一条）
-	if c, ok := m.conns[user]; ok && c != nil {
-		conns = append(conns, c)
-	}
+	//if c, ok := m.conns[user]; ok && c != nil {
+	//	conns = append(conns, c)
+	//}
 
 	// 新索引（可能多条）
 	if mm := m.byUser[user]; mm != nil {

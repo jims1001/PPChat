@@ -36,7 +36,7 @@ func main() {
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
 	if gwID == "" {
-		gwID = config.Global.GatewayNodeId
+		gwID = config.Global.NodeId
 	}
 	routerAddr := os.Getenv("ROUTER_ADDR")
 	if routerAddr == "" {

@@ -29,12 +29,13 @@ func must(err error) {
 func main() {
 
 	// 配置生成的ids
-
 	// 配置为 网关节点
 	config.Global.NodeType = config.NodeTypeMsgGateWay
-	config.Global = config.MessageGatewayConfig
+	var config1 = config.MessageGatewayConfig
+	config.Global = config1
 	config.ConfigRegistry("chat-service", config.Global.NodeId)
 	config.ConfigIds()
+
 	config.ConfigRedis()
 	config.ConfigMgo()
 	config.ConfigMiddleware()
