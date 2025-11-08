@@ -53,7 +53,7 @@ var MessageDataConfig = AppConfig{
 var MessageApiNodeConfig = AppConfig{
 	NodeType: NodeTypeApiNode,
 	NodeId:   "apiNode_01",
-	GroupId:  "message_api_node_03",
+	GroupId:  "api_01",
 	ReceiveTopic: map[pb.MessageFrameData_Type]string{
 		pb.MessageFrameData_DATA: "message_receive_data",
 		pb.MessageFrameData_CACK: "message_receive_ack",
@@ -62,6 +62,6 @@ var MessageApiNodeConfig = AppConfig{
 		pb.MessageFrameData_DATA: "message_sender_data",
 		pb.MessageFrameData_CACK: "message_sender_ack",
 	},
-	Port:     9090,
+	Port:     10010,
 	GrpcPort: 50053,
 }

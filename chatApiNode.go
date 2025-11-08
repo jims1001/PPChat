@@ -25,13 +25,15 @@ func main() {
 
 	// 配置为 网关节点
 	config.Global.NodeType = config.NodeTypeApiNode
+	log.Println("config.Global.NodeType ")
 	config.Global = config.MessageApiNodeConfig
-
 	config.ConfigIds()
 	config.ConfigRedis()
 	config.ConfigMgo()
 	config.ConfigMiddleware()
-	config.ConfigKafka(msg.HandlerTopicMessage)
+
+	//TODO 先注释掉
+	//config.ConfigKafka(msg.HandlerTopicMessage)
 
 	// 1) Prepare parameters
 	gwID := os.Getenv("GATEWAY_ID")
@@ -40,7 +42,7 @@ func main() {
 	}
 	routerAddr := os.Getenv("ROUTER_ADDR")
 	if routerAddr == "" {
-		routerAddr = "127.0.0.1:50051"
+		routerAddr = fmt.Sprintf("127.0.0.1:%d", config.Global.GrpcPort)
 	}
 
 	conn := chat.NewConnManager(gwID)
@@ -59,7 +61,6 @@ func main() {
 		return
 	}
 
-	// 4) Start gRPC service
 	go func() {
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Global.GrpcPort))
 		if err != nil {
