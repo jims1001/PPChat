@@ -25,6 +25,12 @@ profile.cov
 go.work
 go.work.sum
 
+deploy/config
+deploy/consul-config
+deploy/consul-data
+deploy/data
+deploy/kafka_kraft_data
+
 # env file
 .env
 
