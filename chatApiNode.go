@@ -6,6 +6,8 @@ import (
 	"PProject/logger"
 	mid "PProject/middleware"
 	msg "PProject/module/message"
+
+	chatService "PProject/module/chat/service"
 	"PProject/module/user"
 	"PProject/service/chat"
 	"fmt"
@@ -93,6 +95,7 @@ func main() {
 	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
 	mid.POST(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
+	mid.POST(r, "/chat/history", chatService.HandlerListMessages, mid.RouteOpt{IsAuth: true})
 
 	logger.Infof("[HTTP] Listening on :%d", config.Global.Port)
 	if err := r.Run(fmt.Sprintf(":%d", config.Global.Port)); err != nil {

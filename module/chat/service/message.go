@@ -6,8 +6,11 @@ import (
 	util "PProject/tools"
 	errors "PProject/tools/errs"
 	ids "PProject/tools/ids"
+	"context"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -399,4 +402,47 @@ func BuildSyncFrameConversations(userID string,
 	}
 
 	return frame, nil
+}
+
+func ListMessages(
+	ctx context.Context,
+	tenantID string,
+	conversationID string,
+	lastSeq int64,
+	limit int64,
+) ([]msgModel.MessageModel, int64, bool, error) {
+
+	filter := bson.M{
+		"tenant_id":       tenantID,
+		"conversation_id": conversationID,
+	}
+	if lastSeq > 0 {
+		filter["seq_num"] = bson.M{"$gt": lastSeq}
+	}
+
+	opts := options.Find().
+		SetSort(bson.D{{Key: "seq_num", Value: 1}}).
+		SetLimit(limit)
+
+	model := msgModel.MessageModel{}
+	col := model.Collection()
+	cur, err := col.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	defer cur.Close(ctx)
+
+	msgs := make([]msgModel.MessageModel, 0, limit)
+	var nextSeq int64
+	for cur.Next(ctx) {
+		var m msgModel.MessageModel
+		if err := cur.Decode(&m); err != nil {
+			return nil, 0, false, err
+		}
+		msgs = append(msgs, m)
+		nextSeq = m.Seq
+	}
+
+	hasMore := int64(len(msgs)) == limit
+	return msgs, nextSeq, hasMore, nil
 }
