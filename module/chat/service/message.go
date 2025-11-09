@@ -421,7 +421,7 @@ func ListMessages(
 	}
 
 	opts := options.Find().
-		SetSort(bson.D{{Key: "seq_num", Value: 1}}).
+		SetSort(bson.D{{Key: "seq_num", Value: -1}}).
 		SetLimit(limit)
 
 	model := msgModel.MessageModel{}

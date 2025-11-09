@@ -100,11 +100,18 @@ func HandlerTopicMessage(topic string, key, value []byte) error {
 			topicKey := ka.SelectCAckTopicByUser(msg.From, keys)
 			topicKey = fmt.Sprintf("%v_%v", gateway, topicKey)
 
-			err = MessageProducerHandler(topicKey, string(key), value)
+			util.UpdateSeq(msg, seq)
+
+			newMsgData, msgErr := util.EncodeFrame(msg)
+			if (msgErr != nil) || newMsg == nil {
+				logger.Errorf("topic key:%v EncodeFrame  error: %s", topicKey, err)
+				return err
+			}
+			err = MessageProducerHandler(topicKey, string(key), newMsgData)
 			if err != nil {
 				return err
 			}
-
+			
 			deliverMsg := chat.BuildSendSuccessAckDeliver(msg.From, msg.GetPayload().ClientMsgId, msg.GetPayload().ServerMsgId, msg)
 			deliverMsgData, err := util.EncodeFrame(deliverMsg)
 			if err != nil {

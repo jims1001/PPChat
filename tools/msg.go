@@ -25,3 +25,11 @@ func DecodeFrame(data []byte) (*pb.MessageFrameData, error) {
 	}
 	return &frame, nil
 }
+
+// UpdateSeq 直接设置消息的 seq_num
+func UpdateSeq(msg *pb.MessageFrameData, seq int64) {
+	if msg == nil {
+		return
+	}
+	msg.GetPayload().Seq = seq
+}
