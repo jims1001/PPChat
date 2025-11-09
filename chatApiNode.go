@@ -5,6 +5,7 @@ import (
 	"PProject/global/config"
 	"PProject/logger"
 	mid "PProject/middleware"
+	"PProject/middleware/security"
 	msg "PProject/module/message"
 
 	chatService "PProject/module/chat/service"
@@ -90,11 +91,18 @@ func main() {
 
 	// 6) Start HTTP + WebSocket
 	r := gin.New()
+	r.Use(security.CORSMiddleware(&security.CORSOptions{
+		AllowOrigins: []string{
+			"http://localhost:5173", // 你的前端
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"Content-Type", "Authorization", "AuthorizationHash"},
+		AllowCredentials: true,
+	}))
 	r.Use(gin.Recovery())
-
 	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
-	mid.POST(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
+	mid.GET(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
 	mid.POST(r, "/chat/history", chatService.HandlerListMessages, mid.RouteOpt{IsAuth: true})
 
 	logger.Infof("[HTTP] Listening on :%d", config.Global.Port)
