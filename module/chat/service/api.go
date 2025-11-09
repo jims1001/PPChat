@@ -2,6 +2,7 @@ package service
 
 import (
 	"PProject/global"
+	"PProject/logger"
 	"context"
 	"net/http"
 
@@ -25,6 +26,12 @@ func HandlerListMessages(c *gin.Context) {
 		params.Limit = 200
 	}
 	_, err := global.GetAuthInfo(c)
+
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+
 	ctx := context.Background()
 	defer ctx.Done()
 
@@ -34,4 +41,41 @@ func HandlerListMessages(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+// ListConversationsRequest 请求体结构，可扩展分页、筛选条件
+type ListConversationsRequest struct {
+	Page  int `json:"page,omitempty"`  // 页码，可选
+	Limit int `json:"limit,omitempty"` // 每页数量，可选
+}
+
+// HandlerListConversations
+// POST 获取当前用户的所有会话列表（带对方用户信息）
+func HandlerListConversations(c *gin.Context) {
+	var req ListConversationsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	auth, err := global.GetAuthInfo(c)
+	if err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
+	}
+	ctx := context.Background()
+	defer ctx.Done()
+
+	// 查询用户所有会话
+	convList, err := FindUserConversations(ctx, "tenant_001", auth.UserId)
+	if err != nil {
+		logger.Errorf("FindUserConversations failed: %v user_id:%v", err, auth.UserId)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code": 500,
+			"msg":  "internal server error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, convList)
 }

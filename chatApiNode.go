@@ -104,6 +104,7 @@ func main() {
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
 	mid.GET(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
 	mid.POST(r, "/chat/history", chatService.HandlerListMessages, mid.RouteOpt{IsAuth: true})
+	mid.POST(r, "/chat/conversation", chatService.HandlerListConversations, mid.RouteOpt{IsAuth: true})
 
 	logger.Infof("[HTTP] Listening on :%d", config.Global.Port)
 	if err := r.Run(fmt.Sprintf(":%d", config.Global.Port)); err != nil {

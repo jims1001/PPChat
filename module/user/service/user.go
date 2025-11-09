@@ -298,3 +298,28 @@ func GetUserById(ctx context.Context, userId string) (*usermodel.User, error) {
 	}
 	return &user, nil
 }
+
+func FindUsersByIDs(ctx context.Context, tenantID string, userIDs []string) ([]usermodel.User, error) {
+	user := usermodel.User{}
+	coll := user.Collection()
+
+	filter := bson.M{
+		"tenant_id": tenantID,
+		"user_id": bson.M{
+			"$in": userIDs,
+		},
+	}
+
+	cursor, err := coll.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var users []usermodel.User
+	if err := cursor.All(ctx, &users); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}

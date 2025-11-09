@@ -2,7 +2,10 @@ package service
 
 import (
 	pb "PProject/gen/message"
+	"PProject/logger"
 	msgModel "PProject/module/chat/model"
+	usermodel "PProject/module/user/model"
+	"PProject/module/user/service"
 	util "PProject/tools"
 	errors "PProject/tools/errs"
 	ids "PProject/tools/ids"
@@ -11,6 +14,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -18,7 +22,7 @@ import (
 func BuildMessageModelFromPB(
 	tenantID string,
 	md *pb.MessageData,
-	seq int64, // 会话内序号（外部计算并传入）
+	seq int64,             // 会话内序号（外部计算并传入）
 	conversationID string, // 会话ID（单聊=u1:u2；群聊=groupID），外部传入更灵活
 ) (*msgModel.MessageModel, error) {
 	if md == nil {
@@ -445,4 +449,69 @@ func ListMessages(
 
 	hasMore := int64(len(msgs)) == limit
 	return msgs, nextSeq, hasMore, nil
+}
+
+func FindUserConversations(ctx context.Context, tenantID, userID string) ([]msgModel.ConversationWithUser, error) {
+	conversation := msgModel.Conversation{}
+	coll := conversation.Collection()
+
+	// 查询指定租户和用户的会话
+	filter := bson.M{
+		"tenant_id":     tenantID,
+		"owner_user_id": userID,
+	}
+
+	opts := options.Find().SetSort(bson.M{"updated_at": -1})
+
+	cursor, err := coll.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var conversations []msgModel.Conversation
+	if err := cursor.All(ctx, &conversations); err != nil {
+		return nil, err
+	}
+
+	// 提取所有会话中的 user_id
+	userIDs := make([]string, 0, len(conversations))
+	for _, c := range conversations {
+		if c.UserID != "" {
+			userIDs = append(userIDs, c.UserID)
+		}
+	}
+
+	// 没有对方用户时直接返回空
+	if len(userIDs) == 0 {
+		return []msgModel.ConversationWithUser{}, nil
+	}
+
+	// 批量查询对应用户信息
+	users, err := service.FindUsersByIDs(ctx, tenantID, userIDs)
+	if err != nil {
+		logger.Error("FindUsersByIDs failed", zap.Error(err))
+		return nil, err
+	}
+
+	// 构建 user_id → 用户信息映射
+	userMap := make(map[string]usermodel.User, len(users))
+	for _, u := range users {
+		userMap[u.UserID] = u
+	}
+
+	// 合并会话和用户信息
+	results := make([]msgModel.ConversationWithUser, 0, len(conversations))
+	for _, c := range conversations {
+		info := msgModel.ConversationWithUser{
+			Conversation: c,
+		}
+		if u, ok := userMap[c.UserID]; ok {
+			info.UserInfo = u
+		}
+		
+		results = append(results, info)
+	}
+
+	return results, nil
 }
