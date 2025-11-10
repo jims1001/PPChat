@@ -509,7 +509,7 @@ func FindUserConversations(ctx context.Context, tenantID, userID string) ([]msgM
 		if u, ok := userMap[c.UserID]; ok {
 			info.UserInfo = u
 		}
-		
+
 		results = append(results, info)
 	}
 

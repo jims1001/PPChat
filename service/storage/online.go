@@ -42,33 +42,48 @@ type OnlineConfig struct {
 const luaBindUser = `
 local unauthZ = KEYS[1]
 local userZ   = KEYS[2]
-local kUnauth = ARGV[1]
+local kUnauth = ARGV[1]    -- 例如 n:{gateway_01:}:id:775723749252415488
 local kAuth   = ARGV[2]
 local ttl     = tonumber(ARGV[3])
+-- ARGV[4] 占位
 local expAt   = tonumber(ARGV[5])
 local useEXAT = tonumber(ARGV[6])
 
+-- 1) 如果已经存在 auth key，则不再创建
 if redis.call("EXISTS", kAuth) == 1 then
   return -1
 end
+
+-- 2) 检查 unauth 是否存在
 if redis.call("EXISTS", kUnauth) == 0 then
-  redis.call("ZREM", unauthZ, kUnauth)
+  -- 删除 unauthZ 中指定的匹配项
+  local members = redis.call("ZRANGEBYSCORE", unauthZ, "-inf", "+inf")
+  for _, member in ipairs(members) do
+    if string.find(member, kUnauth, 1, true) then
+      redis.call("ZREM", unauthZ, member)
+    end
+  end
   return 0
 end
 
+-- 3) 存在 unauth：从索引和键中清理它
 redis.call("ZREM", unauthZ, kUnauth)
 redis.call("DEL", kUnauth)
 
-if useEXAT == 1 then
+-- 4) 创建新的 auth key
+if useEXAT == 1 and expAt and expAt > 0 then
   redis.call("SET", kAuth, "1")
   redis.call("PEXPIREAT", kAuth, expAt * 1000)
 else
   redis.call("SET", kAuth, "1", "EX", ttl)
 end
+
+-- 5) 将 auth key 加入用户索引
 redis.call("ZADD", userZ, expAt, kAuth)
 redis.call("EXPIRE", userZ, ttl * 2)
 
 return 1
+
 `
 
 // 清理未授权连接（超时踢出）

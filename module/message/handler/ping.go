@@ -4,6 +4,7 @@ import (
 	pb "PProject/gen/message"
 	"PProject/service/chat"
 	online "PProject/service/storage"
+	"context"
 	"time"
 
 	"PProject/logger"
@@ -98,18 +99,58 @@ func (h *PingHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *
 				}
 
 			case <-ticker.C: // 常规 ping
-				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 
-				if ok, err := online.GetManager().HeartbeatAuthorized(h.ctx.S.ConnMgr().GwId(), rec.UserId, rec.SnowID); err != nil {
-					logger.Infof("[PingHandler] renew after biz write failed: %v", err)
-				} else if !ok {
-					logger.Infof("[PingHandler] renew after biz write returned false")
+				gwID := h.ctx.S.ConnMgr().GwId()
+				userID := rec.UserId
+				currentSnowID := rec.SnowID
+
+				// 心跳这类操作不用给 600s，这里给 2s 足够，防止阻塞
+				ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
+
+				reauthorized := false
+
+				// 1. 看这个用户现在有没有在线
+				gatewayID, _ := online.GetManager().GetUserGateway(ctx, userID)
+				// 2. 没有记录，就直接绑定（Authorize），不走 Connect
+				if gatewayID == "" {
+					logger.Infof("[PingHandler] user=%s not online, authorize directly...", userID)
+					if _, err := online.GetManager().Authorize(ctx, userID, currentSnowID); err != nil {
+						logger.Errorf("[PingHandler] direct authorize failed gw=%s user=%s snow=%s err=%v",
+							gwID, userID, currentSnowID, err)
+					} else {
+						logger.Infof("[PingHandler] direct authorize success gw=%s user=%s snow=%s",
+							gwID, userID, currentSnowID)
+						reauthorized = true
+					}
+				} else if gatewayID != gwID {
+					// 在线但在别的网关
+					logger.Errorf("[PingHandler] user=%s online at another gw=%s, expected=%s",
+						userID, gatewayID, gwID)
+					// 这里看你业务要不要强制迁移：
+					// if _, err := online.GetManager().Authorize(ctx, userID, currentSnowID); err == nil {
+					//     reauthorized = true
+					// }
 				}
 
-				//logger.Infof("ping expire is sucess")
+				// 3. 如果这轮没刚刚绑定成功，就做心跳续期
+				if !reauthorized {
+					if ok, err := online.GetManager().HeartbeatAuthorized(gwID, userID, currentSnowID); err != nil {
+						logger.Infof("[PingHandler] heartbeat failed: %v", err)
+					} else if !ok {
+						// 心跳说这条记录无效，就再做一次直接授权
+						logger.Infof("[PingHandler] heartbeat returned false, re-authorizing user=%s", userID)
+						if _, err := online.GetManager().Authorize(ctx, userID, currentSnowID); err != nil {
+							logger.Errorf("[PingHandler] authorize retry failed gw=%s user=%s err=%v", gwID, userID, err)
+						}
+					}
+				}
 
+				cancel()
+
+				// 4. 最后发 ping
+				_ = conn.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 				if err := conn.Conn.WriteControl(websocket.PingMessage, []byte("ping"), time.Now().Add(writeWait)); err != nil {
-					logger.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", rec.SnowID, rec.UserId, err)
+					logger.Infof("[PingHandler] ping err snowID=%s user=%s err=%v", currentSnowID, userID, err)
 					return
 				}
 			}
