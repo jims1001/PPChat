@@ -54,6 +54,8 @@ type WsConn struct {
 	TTL       time.Duration // 当前 TTL（随授权态切换）
 	ExpireAt  time.Time     // 到期时间（过期由 sweeper 清理）
 	Heartbeat time.Time     // 最近心跳时间
+	// 👇 新增字段：用于标记 CONNECT 是否已处理过
+	Connected uint32
 }
 
 type ConnManager struct {

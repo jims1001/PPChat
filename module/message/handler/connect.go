@@ -2,6 +2,7 @@ package handler
 
 import (
 	pb "PProject/gen/message"
+	"sync/atomic"
 
 	"PProject/logger"
 	"PProject/service/chat"
@@ -49,30 +50,47 @@ func (h *ConnectHandler) Type() pb.MessageFrameData_Type { return pb.MessageFram
 
 func (h *ConnectHandler) Handle(_ *chat.ChatContext, f *pb.MessageFrameData, conn *chat.WsConn) error {
 
-	c, _ := context.WithTimeout(context.Background(), 50*time.Second)
-	//defer cancel()
-	sessionKey, snowID, err := online.GetManager().Connect(c)
+	// 🔒 检查这个连接是否已经执行过 CONNECT
+	if !atomic.CompareAndSwapUint32(&conn.Connected, 0, 1) {
+		// CompareAndSwap 返回 false 表示 conn.connected 已经不是 0 了（说明已经处理过）
+		logger.Errorf("[ConnectHandler] duplicate CONNECT ignored for %s", conn.Remote.String())
+		return nil
+	}
+
+	// ✅ 第一次执行到这里，会自动把 conn.connected 改成 1
+	// 后面所有重复的 CONNECT 都会被上面那段直接拦截
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
+	sessionKey, snowID, err := online.GetManager().Connect(ctx)
 	if err != nil {
 		logger.Errorf("[ConnectHandler] Connect (unauth) failed: %v", err)
 		_ = conn.Conn.Close()
+
+		// 如果失败，可以恢复标志，让客户端还能重新连接
+		atomic.StoreUint32(&conn.Connected, 0)
 		return &errors.ErrInternalServer
 	}
 
 	logger.Infof("[ConnectHandler] new unauth conn snowID=%s sessionKey=%s", snowID, sessionKey)
 
-	// 交给连接管理器登记（未授权）
 	rec, err := h.ctx.S.ConnMgr().AddUnauth(snowID, conn.Conn)
 	if err != nil {
 		logger.Errorf("[ConnectHandler] ConnMgr.AddUnauth failed: %v", err)
 		_ = conn.Conn.Close()
+		atomic.StoreUint32(&conn.Connected, 0) // 同样恢复标志
 		return &errors.ErrInternalServer
 	}
+
 	rec.RId = sessionKey
 	rec.SendChan = make(chan []byte, 256)
 
 	connectAck := chat.BuildConnectionAck(snowID, h.ctx.S.ConnMgr().GwId(), sessionKey, snowID)
 	h.data <- &chat.WSConnectionMsg{Frame: connectAck, Conn: conn}
+
 	return nil
+
 }
 
 func (h *ConnectHandler) Run() {
