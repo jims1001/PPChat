@@ -62,12 +62,17 @@ type AutoResolvePolicy struct {
 
 	// —— 无活动持续时间 —— //
 	// 为了计算方便存秒；同时保留原始值与单位，便于 UI 回显
-	InactiveThresholdSeconds int64  `bson:"inactive_threshold_seconds" json:"inactive_threshold_seconds"` // 例如 15*60
-	InactiveRawValue         int64  `bson:"inactive_raw_value"         json:"inactive_raw_value"`         // 例如 15
-	InactiveRawUnit          string `bson:"inactive_raw_unit"          json:"inactive_raw_unit"`          // "minute" | "hour" | "day"
+	InactiveThresholdSeconds int64 `bson:"inactive_threshold_seconds" json:"inactive_threshold_seconds"`
+	// 不活跃超时时间（秒），用于系统实际判断与计算
+
+	InactiveRawValue int64 `bson:"inactive_raw_value" json:"inactive_raw_value"`
+	// 配置的不活跃时间数值（用于展示与编辑）
+
+	InactiveRawUnit string `bson:"inactive_raw_unit" json:"inactive_raw_unit"`
+	// 配置的不活跃时间单位："minute"（分钟）| "hour"（小时）| "day"（天）
 
 	// —— 自定义自动解决消息 —— //
-	// 发送给客户的文案（富文本可换成 content+content_type）
+	// 发送给客户的文案（富文本可换成 content+content_type）由于闲置15天 自动解决 对话系统标记已经解决
 	ResolveMessage string `bson:"resolve_message,omitempty"   json:"resolve_message,omitempty"`
 
 	// —— 偏好设置 —— //

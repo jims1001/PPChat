@@ -2,6 +2,7 @@ package middleware
 
 import (
 	midsec "PProject/middleware/security"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,27 +11,38 @@ type RouteOpt struct {
 	IsAuth bool
 }
 
-// 封装 POST
-func POST(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
+// 内部统一处理（避免重复代码）
+func withOpt(r gin.IRoutes, opt RouteOpt, handler gin.HandlerFunc) []gin.HandlerFunc {
 	if opt.IsAuth {
-		r.POST(path,
-			// 这里替换成你实际的 Auth 中间件
+		return []gin.HandlerFunc{
 			midsec.Middleware(midsec.DefaultOptions()),
 			handler,
-		)
-	} else {
-		r.POST(path, handler)
+		}
 	}
+	return []gin.HandlerFunc{handler}
 }
 
-// 封装 GET
+// POST
+func POST(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
+	r.POST(path, withOpt(r, opt, handler)...)
+}
+
+// GET
 func GET(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
-	if opt.IsAuth {
-		r.GET(path,
-			midsec.Middleware(midsec.DefaultOptions()),
-			handler,
-		)
-	} else {
-		r.GET(path, handler)
-	}
+	r.GET(path, withOpt(r, opt, handler)...)
+}
+
+// PATCH
+func PATCH(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
+	r.PATCH(path, withOpt(r, opt, handler)...)
+}
+
+// PUT
+func PUT(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
+	r.PUT(path, withOpt(r, opt, handler)...)
+}
+
+// DELETE
+func DELETE(r gin.IRoutes, path string, handler gin.HandlerFunc, opt RouteOpt) {
+	r.DELETE(path, withOpt(r, opt, handler)...)
 }

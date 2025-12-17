@@ -6,6 +6,7 @@ import (
 	"PProject/logger"
 	mid "PProject/middleware"
 	"PProject/middleware/security"
+	"PProject/module/chatBox/api"
 	msg "PProject/module/message"
 
 	chatService "PProject/module/chat/service"
@@ -100,12 +101,16 @@ func main() {
 		AllowCredentials: true,
 	}))
 	r.Use(gin.Recovery())
+
+	// 账户相关的路由
+
+	api.RegisterAccountSettingRoutes(*r)
+	
 	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
 	mid.GET(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
 	mid.POST(r, "/chat/history", chatService.HandlerListMessages, mid.RouteOpt{IsAuth: true})
 	mid.POST(r, "/chat/conversation", chatService.HandlerListConversations, mid.RouteOpt{IsAuth: true})
-
 	logger.Infof("[HTTP] Listening on :%d", config.Global.Port)
 	if err := r.Run(fmt.Sprintf(":%d", config.Global.Port)); err != nil {
 		logger.Errorf("HTTP server failed: %v", err)
