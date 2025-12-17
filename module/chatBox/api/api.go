@@ -90,6 +90,28 @@ func hUpsertAutoResolvePolicy(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": out})
 }
 
+func hGetAutoResolvePolicy(c *gin.Context) {
+	ctx := c.Request.Context()
+	tenantID := c.Param("tenantId")
+	accountID := c.Param("accountId")
+
+	scopeType := c.Query("scope_type")
+	scopeID := c.Query("scope_id")
+
+	if scopeType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "scope_type required"})
+		return
+	}
+
+	out, err := service.GetAutoResolvePolicyBiz(ctx, tenantID, accountID, scopeType, scopeID)
+	if err != nil {
+		service.WriteBizErr(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": out})
+}
+
 func hPatchPolicyEnabled(c *gin.Context) {
 	tenantID := c.Param("tenantId")
 	accountID := c.Param("accountId")

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
+	
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -286,6 +286,42 @@ func UpsertAutoResolvePolicyBiz(ctx context.Context, tenantID, accountID string,
 		return nil, internal("db error", err)
 	}
 	return &out, nil
+}
+
+func GetAutoResolvePolicyBiz(
+	ctx context.Context,
+	tenantID string,
+	accountID string,
+	scopeType string,
+	scopeID string,
+) (*chatmodel.AutoResolvePolicy, error) {
+
+	if !isScopeOk(scopeType) {
+		return nil, bad("invalid scope_type")
+	}
+
+	filter := bson.M{
+		"tenant_id":  tenantID,
+		"account_id": accountID,
+		"scope_type": scopeType,
+	}
+
+	// account 级别建议 scope_id 固定为空
+	if scopeID != "" {
+		filter["scope_id"] = scopeID
+	} else {
+		filter["scope_id"] = bson.M{"$in": []any{nil, ""}}
+	}
+
+	var p chatmodel.AutoResolvePolicy
+	if err := p.Collection().FindOne(ctx, filter).Decode(&p); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, notFound("auto resolve policy not found")
+		}
+		return nil, internal("db error", err)
+	}
+
+	return &p, nil
 }
 
 func PatchPolicyEnabledBiz(ctx context.Context, tenantID, accountID string, req PatchPolicyEnabledReq) error {

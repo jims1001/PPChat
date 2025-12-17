@@ -14,10 +14,11 @@ func RegisterAccountSettingRoutes(r gin.Engine) {
 	mid.PATCH(g, "/accounts/:accountId/setting", hPatchAccountSetting, mid.RouteOpt{IsAuth: true})
 	mid.PATCH(g, "/accounts/:accountId/setting/auto-resolve", hPatchAccountAutoResolve, mid.RouteOpt{IsAuth: true})
 	// auto-resolve policy
-	mid.POST(g, "/accounts/:accountId/auto-resolve/policy", hUpsertAutoResolvePolicy, mid.RouteOpt{IsAuth: true})
-	mid.POST(g, "/accounts/:accountId/auto-resolve/policy/enabled", hPatchPolicyEnabled, mid.RouteOpt{IsAuth: true})
-	mid.POST(g, "/accounts/:accountId/auto-resolve/policy/preference", hPatchPolicyPreference, mid.RouteOpt{IsAuth: true})
-	mid.POST(g, "/accounts/:accountId/auto-resolve/policy/tags", hPatchPolicyTags, mid.RouteOpt{IsAuth: true})
+	mid.PUT(g, "/accounts/:accountId/auto-resolve/policy", hUpsertAutoResolvePolicy, mid.RouteOpt{IsAuth: true})
+	mid.GET(g, "/accounts/:accountId/auto-resolve/policy", hGetAutoResolvePolicy, mid.RouteOpt{IsAuth: true})
+	mid.PATCH(g, "/accounts/:accountId/auto-resolve/policy/enabled", hPatchPolicyEnabled, mid.RouteOpt{IsAuth: true})
+	mid.PATCH(g, "/accounts/:accountId/auto-resolve/policy/preference", hPatchPolicyPreference, mid.RouteOpt{IsAuth: true})
+	mid.PATCH(g, "/accounts/:accountId/auto-resolve/policy/tags", hPatchPolicyTags, mid.RouteOpt{IsAuth: true})
 
 	//mid.POST(g, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 }
