@@ -104,8 +104,10 @@ func main() {
 
 	// 账户相关的路由
 
-	api.RegisterAccountSettingRoutes(*r)
-	
+	api.RegisterAccountSettingRoutes(r)
+	api.RegisterRoleAndPermissionRoutes(r)
+	api.RegisterAgentRoutesV1(r)
+
 	mid.POST(r, "/login", user.HandlerLogin, mid.RouteOpt{IsAuth: false})
 	mid.POST(r, "/check", user.HandlerCheck, mid.RouteOpt{IsAuth: true})
 	mid.GET(r, "/user", user.HandleUserInfo, mid.RouteOpt{IsAuth: true})
