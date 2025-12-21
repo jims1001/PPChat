@@ -32,42 +32,47 @@ func RegisterV1(r *gin.Engine,
 	asgH *handler.AssigneeHandler,
 	colH *handler.CollaboratorHandler,
 ) {
-	// Role
-	r.POST("/tenants/:tenantId/roles", roleH.Create)
-	r.GET("/tenants/:tenantId/roles", roleH.List)
-	r.GET("/tenants/:tenantId/roles/:roleId", roleH.Get)
-	r.PATCH("/tenants/:tenantId/roles/:roleId", roleH.Patch)
-	r.DELETE("/tenants/:tenantId/roles/:roleId", roleH.Delete)
+	g := r.Group("/api/v1/:tenantId")
 
-	// Permission
-	r.POST("/permissions", permH.Create) // 你的 Permission 没 tenantId 字段，这里做全局权限点
-	r.GET("/permissions", permH.List)
-	r.GET("/permissions/:permissionId", permH.Get)
+	// Role
+	g.POST("/roles", roleH.Create)
+	g.GET("/roles", roleH.List)
+	g.GET("/roles/:roleId", roleH.Get)
+	g.PATCH("/roles/:roleId", roleH.Patch)
+	g.DELETE("/roles/:roleId", roleH.Delete)
 
 	// Role-Permission
-	r.POST("/tenants/:tenantId/roles/:roleId/permissions", rpH.BindBatch)
-	r.GET("/tenants/:tenantId/roles/:roleId/permissions", rpH.ListByRole)
-	r.DELETE("/tenants/:tenantId/roles/:roleId/permissions/:permissionId", rpH.Unbind)
+	g.POST("/roles/:roleId/permissions", rpH.BindBatch)
+	g.GET("/roles/:roleId/permissions", rpH.ListByRole)
+	g.DELETE("/roles/:roleId/permissions/:permissionId", rpH.Unbind)
 
-	// Conversation - Assignee (AgentConversation)
-	r.POST("/tenants/:tenantId/conversations/:conversationId/assignee", asgH.Set)
-	r.GET("/tenants/:tenantId/conversations/:conversationId/assignee", asgH.Get)
-	r.DELETE("/tenants/:tenantId/conversations/:conversationId/assignee/:agentId", asgH.Remove)
+	// Conversation - Assignee
+	g.POST("/conversations/:conversationId/assignee", asgH.Set)
+	g.GET("/conversations/:conversationId/assignee", asgH.Get)
+	g.DELETE("/conversations/:conversationId/assignee/:agentId", asgH.Remove)
 
-	// Conversation - Collaborators (AgentCollaborator)
-	r.POST("/tenants/:tenantId/conversations/:conversationId/collaborators", colH.Add)
-	r.GET("/tenants/:tenantId/conversations/:conversationId/collaborators", colH.List)
-	r.DELETE("/tenants/:tenantId/conversations/:conversationId/collaborators/:agentId", colH.Remove)
+	// Conversation - Collaborators
+	g.POST("/conversations/:conversationId/collaborators", colH.Add)
+	g.GET("/conversations/:conversationId/collaborators", colH.List)
+	g.DELETE("/conversations/:conversationId/collaborators/:agentId", colH.Remove)
+
+	// Permission（全局，不带 tenantId）
+	v1 := r.Group("/api/v1")
+	v1.POST("/permissions", permH.Create)
+	v1.GET("/permissions", permH.List)
+	v1.GET("/permissions/:permissionId", permH.Get)
 }
 
 func RegisterAgentRoutes(r *gin.Engine, h *handler.AgentHandler) {
-	r.POST("/tenants/:tenantId/agents", h.CreateAgent)
-	r.GET("/tenants/:tenantId/agents", h.ListAgents)
-	r.GET("/tenants/:tenantId/agents/:agentId", h.GetAgent)
-	r.PATCH("/tenants/:tenantId/agents/:agentId", h.PatchAgent)
+	g := r.Group("/api/v1/:tenantId")
 
-	r.POST("/tenants/:tenantId/agents/:agentId/resend-invite", h.ResendInvite)
-	r.POST("/tenants/:tenantId/agents/invites/accept", h.AcceptInvite)
+	g.POST("/agents", h.CreateAgent)
+	g.GET("/agents", h.ListAgents)
+	g.GET("/agents/:agentId", h.GetAgent)
+	g.PATCH("/agents/:agentId", h.PatchAgent)
+
+	g.POST("/agents/:agentId/resend-invite", h.ResendInvite)
+	g.POST("/agents/invites/accept", h.AcceptInvite)
 }
 
 func InitHandlers() (

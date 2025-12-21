@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"PProject/logger"
 	"PProject/module/chatBox/service/dto"
 	"PProject/module/chatBox/service/repo"
 	"context"
@@ -104,19 +105,26 @@ func (h *RolePermissionHandler) ListByRole(c *gin.Context) {
 		return
 	}
 
+	logger.Infof("list permissions by role success: roleId=%s, permissionCount=%d, permissionIDs=%v", roleId, len(permIDs), permIDs)
+
 	// 3) 批量查 permission 详情
 	objIDs := make([]primitive.ObjectID, 0, len(permIDs))
 	for _, pid := range permIDs {
-		oid, err := primitive.ObjectIDFromHex(pid)
-		if err == nil {
-			objIDs = append(objIDs, oid)
-		}
+		oid, _ := primitive.ObjectIDFromHex(pid)
+		objIDs = append(objIDs, oid)
 	}
 	perms, err := h.PermissionRepo.FindByIDs(ctx, objIDs)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+
+	logger.Infof(
+		"[RBAC] permissions loaded: roleId=%s, permissionCount=%d, permissions=%+v",
+		roleId,
+		len(perms),
+		perms,
+	)
 
 	resp := dto.RolePermissionsResp{
 		RoleID:      roleId,

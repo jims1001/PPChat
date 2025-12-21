@@ -5,6 +5,8 @@ import (
 	"PProject/module/chatBox/service/dto"
 	"PProject/module/chatBox/service/repo"
 	"context"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -121,6 +123,109 @@ func (h *RoleHandler) Patch(c *gin.Context) {
 	c.JSON(200, gin.H{"ok": true})
 }
 
-func (h *RoleHandler) List(c *gin.Context)   { c.JSON(200, gin.H{"todo": true}) }
-func (h *RoleHandler) Get(c *gin.Context)    { c.JSON(200, gin.H{"todo": true}) }
-func (h *RoleHandler) Delete(c *gin.Context) { c.JSON(200, gin.H{"todo": true}) }
+func (h *RoleHandler) List(c *gin.Context) {
+	tenantId := c.Param("tenantId")
+
+	// 可选：分页参数（默认 page=1, page_size=20）
+	page := 1
+	pageSize := 20
+	if v := c.Query("page"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			page = n
+		} else {
+			c.JSON(400, gin.H{"error": "invalid page"})
+			return
+		}
+	}
+	if v := c.Query("page_size"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+			pageSize = n
+		} else {
+			c.JSON(400, gin.H{"error": "invalid page_size"})
+			return
+		}
+	}
+
+	// 可选：简单过滤（按 status / keyword）
+	filter := bson.M{}
+	if status := c.Query("status"); status != "" {
+		filter["status"] = status
+	}
+	if kw := strings.TrimSpace(c.Query("q")); kw != "" {
+		// name/code 模糊搜索（Mongo 正则）
+		filter["$or"] = []bson.M{
+			{"name": bson.M{"$regex": kw, "$options": "i"}},
+			{"code": bson.M{"$regex": kw, "$options": "i"}},
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	items, total, err := h.Repo.List(ctx, tenantId, filter, page, pageSize)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{
+		"items":     items,
+		"page":      page,
+		"page_size": pageSize,
+		"total":     total,
+	})
+}
+
+func (h *RoleHandler) Get(c *gin.Context) {
+	tenantId := c.Param("tenantId")
+	roleId := c.Param("roleId")
+
+	rid, err := primitive.ObjectIDFromHex(roleId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid roleId"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	role, err := h.Repo.FindByID(ctx, tenantId, rid)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "role not found"})
+		return
+	}
+
+	c.JSON(200, gin.H{"item": role})
+}
+
+func (h *RoleHandler) Delete(c *gin.Context) {
+	tenantId := c.Param("tenantId")
+	roleId := c.Param("roleId")
+
+	rid, err := primitive.ObjectIDFromHex(roleId)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid roleId"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	// 先查再删：用于 built-in 保护 & 404 语义一致
+	old, err := h.Repo.FindByID(ctx, tenantId, rid)
+	if err != nil {
+		c.JSON(404, gin.H{"error": "role not found"})
+		return
+	}
+	if old.BuiltIn {
+		c.JSON(403, gin.H{"error": "built-in role is not deletable"})
+		return
+	}
+
+	if err := h.Repo.Delete(ctx, tenantId, rid); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"ok": true})
+}
